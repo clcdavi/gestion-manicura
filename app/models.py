@@ -77,6 +77,8 @@ class ProductoStock(Base):
     cantidad_minima = Column(Float, default=1)
     costo_unitario = Column(Float, default=0)
     unidad = Column(String(20), default="unidad")
+    rendimiento_usos = Column(Float, default=1.0)
+    unidad_rendimiento = Column(String(20), default="aplicaciones")
     activo = Column(Boolean, default=True)
 
     movimientos = relationship("StockMovimiento", back_populates="producto")
@@ -139,3 +141,23 @@ class StockMovimiento(Base):
     venta_id = Column(Integer, ForeignKey("ventas.id"), nullable=True)
 
     producto = relationship("ProductoStock", back_populates="movimientos")
+
+
+class CostoFijo(Base):
+    __tablename__ = "costos_fijos"
+
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), nullable=False)
+    monto = Column(Float, nullable=False)
+    categoria = Column(String(20), default="general")  # local/servicios/personal/otros
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class ConfiguracionNegocio(Base):
+    __tablename__ = "configuracion_negocio"
+
+    id = Column(Integer, primary_key=True)
+    dias_trabajo_mes = Column(Integer, default=22)
+    horas_dia = Column(Float, default=7.0)
+    pct_ocupacion = Column(Float, default=0.75)

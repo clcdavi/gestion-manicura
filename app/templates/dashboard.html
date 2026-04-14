@@ -144,29 +144,33 @@
 
 <!-- Análisis de márgenes -->
 <div class="panel" style="margin-top:2rem">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
     <h3 style="margin:0">Análisis de rentabilidad por servicio</h3>
-    <span class="text-muted" style="font-size:.8rem">Basado en costos de insumos configurados</span>
+    <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+      {% if punto_equilibrio.servicios_minimos %}
+      <span class="badge badge-neutral">
+        Punto de equilibrio: <strong>{{ punto_equilibrio.servicios_minimos }} servicios/mes</strong>
+        {% if punto_equilibrio.servicios_por_dia %}({{ punto_equilibrio.servicios_por_dia }}/día){% endif %}
+      </span>
+      {% endif %}
+      <a href="/costos" class="btn btn-sm btn-outline">⚙ Configurar costos</a>
+    </div>
   </div>
 
-  {% set perdidas    = margenes | selectattr("estado","eq","perdida")   | list %}
-  {% set criticos    = margenes | selectattr("estado","eq","critico")   | list %}
-  {% set bajos       = margenes | selectattr("estado","eq","bajo")      | list %}
-  {% set sin_datos   = margenes | selectattr("estado","eq","sin_datos") | list %}
+  {% set criticos  = margenes | selectattr("estado","equalto","critico")    | list %}
+  {% set advertencias = margenes | selectattr("estado","equalto","advertencia") | list %}
 
-  {% if perdidas %}
+  {% if criticos %}
   <div class="alerta-banner" style="margin-bottom:1rem">
-    🚨 <strong>{{ perdidas|length }} servicio(s) con pérdida:</strong>
-    {% for m in perdidas %}
-    <strong>{{ m.servicio.nombre }}</strong> (cuesta {{ m.costo | pesos }}, se cobra {{ m.servicio.precio | pesos }}){% if not loop.last %}, {% endif %}
-    {% endfor %}
-    — Subí el precio urgente.
+    🚨 <strong>{{ criticos|length }} servicio(s) crítico(s)</strong> — margen menor al 15%.
+    {% for m in criticos %}<strong>{{ m.servicio.nombre }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}
+    — Revisá precios urgente.
   </div>
   {% endif %}
 
-  {% if criticos %}
+  {% if advertencias %}
   <div class="alerta-banner alerta-warn" style="margin-bottom:1rem">
-    ⚠️ <strong>{{ criticos|length }} servicio(s) con margen menor al 20%</strong> — Revisar precios.
+    ⚠️ <strong>{{ advertencias|length }} servicio(s) con advertencia</strong> — margen entre 15% y 30%.
   </div>
   {% endif %}
 
@@ -175,8 +179,9 @@
     <thead>
       <tr>
         <th>Servicio</th>
-        <th>Precio cobrado</th>
+        <th>Precio</th>
         <th>Costo insumos</th>
+        <th>Costo tiempo</th>
         <th>Ganancia</th>
         <th>Margen</th>
         <th>Estado</th>
@@ -185,51 +190,55 @@
     </thead>
     <tbody>
       {% for m in margenes %}
-      <tr class="{% if m.estado == 'perdida' %}row-alert{% endif %}">
-        <td><strong>{{ m.servicio.nombre }}</strong></td>
-        <td class="td-price">{{ m.servicio.precio | pesos }}</td>
-        <td class="td-price {% if m.sin_costos %}text-muted{% endif %}">
-          {% if m.sin_costos %}—{% else %}{{ m.costo | pesos }}{% endif %}
+      <tr class="{% if m.estado == 'critico' %}row-alert{% endif %}">
+        <td><strong>{{ m.servicio.nombre }}</strong><br>
+          <small class="text-muted">{{ m.servicio.duracion_min }} min</small>
         </td>
-        <td class="td-price {% if m.margen < 0 %}text-alert{% elif not m.sin_costos %}text-success{% endif %}">
-          {% if m.sin_costos %}—{% else %}{{ m.margen | pesos }}{% endif %}
+        <td class="td-price">{{ m.servicio.precio | pesos }}</td>
+        <td class="td-price {% if not m.tiene_insumos %}text-muted{% endif %}">
+          {% if m.tiene_insumos %}{{ m.costo_materiales | pesos }}{% else %}—{% endif %}
+        </td>
+        <td class="td-price {% if m.costo_tiempo == 0 %}text-muted{% endif %}">
+          {% if m.costo_tiempo > 0 %}{{ m.costo_tiempo | pesos }}{% else %}—{% endif %}
+        </td>
+        <td class="td-price {% if m.margen < 0 %}text-alert{% elif not m.sin_datos %}text-success{% endif %}">
+          {% if m.sin_datos %}—{% else %}{{ m.margen | pesos }}{% endif %}
         </td>
         <td>
-          {% if m.sin_costos %}
+          {% if m.sin_datos %}
           <span class="text-muted">—</span>
           {% else %}
           <div style="display:flex;align-items:center;gap:.5rem">
             <div style="flex:1;background:var(--border);border-radius:4px;height:8px;min-width:60px">
-              <div style="width:{{ [[m.margen_pct,0]|max, 100]|min }}%;background:{% if m.margen_pct < 0 %}var(--danger){% elif m.margen_pct < 20 %}#F59E0B{% elif m.margen_pct < 40 %}#10B981{% else %}#10B981{% endif %};border-radius:4px;height:8px"></div>
+              {% set pct_barra = [[m.margen_pct, 0]|max, 100]|min %}
+              <div style="width:{{ pct_barra }}%;background:{% if m.margen_pct < 15 %}var(--danger,#EF4444){% elif m.margen_pct < 30 %}#F59E0B{% else %}#10B981{% endif %};border-radius:4px;height:8px"></div>
             </div>
-            <span style="font-size:.85rem;font-weight:600">{{ "%.0f" | format(m.margen_pct) }}%</span>
+            <span style="font-size:.85rem;font-weight:600">{{ "%.0f"|format(m.margen_pct) }}%</span>
           </div>
           {% endif %}
         </td>
         <td>
-          {% if m.estado == "perdida" %}
-            <span class="badge badge-alert">Pérdida</span>
-          {% elif m.estado == "critico" %}
+          {% if m.estado == "critico" %}
             <span class="badge badge-alert">Crítico</span>
-          {% elif m.estado == "bajo" %}
-            <span class="badge badge-warn">Bajo</span>
-          {% elif m.estado == "ok" %}
+          {% elif m.estado == "advertencia" %}
+            <span class="badge badge-warn">Advertencia</span>
+          {% elif m.estado == "saludable" %}
             <span class="badge badge-ok">Saludable</span>
           {% else %}
-            <span class="badge badge-neutral">Sin costos</span>
+            <span class="badge badge-neutral">Sin datos</span>
           {% endif %}
         </td>
         <td style="font-size:.82rem;color:var(--text-muted)">
-          {% if m.estado == "perdida" %}
-            🚨 Subir precio mínimo a {{ (m.costo * 1.3) | pesos }}
-          {% elif m.estado == "critico" %}
-            ⚠️ Considerar subir a {{ (m.costo / 0.8) | pesos }}
-          {% elif m.estado == "bajo" %}
-            💡 Podría subir a {{ (m.costo / 0.6) | pesos }}
-          {% elif m.estado == "ok" %}
-            ✓ Precio adecuado
-          {% else %}
+          {% if m.sin_datos and not m.tiene_insumos %}
             Configurar insumos del servicio
+          {% elif not m.tiene_duracion %}
+            Configurar duración del servicio
+          {% elif m.estado == "critico" %}
+            🚨 Precio por debajo del punto de equilibrio
+          {% elif m.estado == "advertencia" %}
+            💡 Considerar aumentar precio o reducir costos
+          {% else %}
+            ✓ Precio adecuado
           {% endif %}
         </td>
       </tr>

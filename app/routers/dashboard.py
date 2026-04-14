@@ -11,6 +11,7 @@ def _now():
 from collections import Counter, defaultdict
 from app.database import get_db
 from app import models
+from app.utils import get_rentabilidad_servicio, get_punto_equilibrio
 
 router = APIRouter(tags=["dashboard"])
 templates = Jinja2Templates(directory="app/templates")
@@ -107,34 +108,12 @@ def dashboard(
             "visitas": visitas,
         }
 
-    # Análisis de márgenes por servicio
+    # Análisis de márgenes por servicio (usando utils de rentabilidad real)
     servicios_activos = db.query(models.Servicio).filter_by(activo=True).order_by(models.Servicio.nombre).all()
-    margenes = []
-    for s in servicios_activos:
-        costo = sum(sp.cantidad_uso * sp.producto.costo_unitario for sp in s.productos_usados)
-        sin_costos = len(s.productos_usados) == 0
-        margen = s.precio - costo
-        margen_pct = (margen / s.precio * 100) if s.precio > 0 else 0
-        if sin_costos:
-            estado = "sin_datos"
-        elif margen < 0:
-            estado = "perdida"
-        elif margen_pct < 20:
-            estado = "critico"
-        elif margen_pct < 40:
-            estado = "bajo"
-        else:
-            estado = "ok"
-        margenes.append({
-            "servicio": s,
-            "costo": costo,
-            "margen": margen,
-            "margen_pct": margen_pct,
-            "estado": estado,
-            "sin_costos": sin_costos,
-        })
-    margenes.sort(key=lambda x: (x["estado"] == "sin_datos", -x.get("margen_pct", 0)
-                                  if x["estado"] != "perdida" else float("inf")))
+    margenes = [get_rentabilidad_servicio(s, db) for s in servicios_activos]
+    margenes.sort(key=lambda x: (x["estado"] == "sin_datos", x["margen_pct"] if not x["sin_datos"] else 9999))
+
+    punto_equilibrio = get_punto_equilibrio(db)
 
     # Forma de pago más usada
     conteo_pago = Counter(v.forma_pago for v in ventas_mes)
@@ -197,6 +176,7 @@ def dashboard(
         "proyeccion_stock": proyeccion_stock[:5],
         "alertas_stock": alertas_stock,
         "margenes": margenes,
+        "punto_equilibrio": punto_equilibrio,
         "hoy": hoy.isoformat(),
         "rango": rango,
         "chart_desde": desde or (dia_inicio_chart.isoformat() if rango == "custom" else ""),

@@ -51,6 +51,19 @@
         <input type="number" id="costo_unitario" name="costo_unitario" step="1" min="0"
                value="{{ producto.costo_unitario | int if producto else 0 }}">
       </div>
+      <div class="form-group">
+        <label for="rendimiento_usos">Rendimiento (usos por unidad)</label>
+        <input type="number" id="rendimiento_usos" name="rendimiento_usos" step="1" min="1"
+               value="{{ producto.rendimiento_usos | int if producto else 1 }}">
+        <small class="form-hint">Ej: un frasco que rinde 40 aplicaciones → 40. Costo por uso = costo unitario ÷ rendimiento.</small>
+      </div>
+      <div class="form-group">
+        <label for="unidad_rendimiento">Unidad de rendimiento</label>
+        <input type="text" id="unidad_rendimiento" name="unidad_rendimiento"
+               value="{{ producto.unidad_rendimiento if producto else 'aplicaciones' }}"
+               placeholder="aplicaciones, servicios, ml por uso…">
+        <small class="form-hint">Describe qué representa cada uso (aplicaciones, servicios, etc.).</small>
+      </div>
     </div>
 
     <div class="form-actions">

@@ -46,12 +46,16 @@ def crear_producto(
     cantidad_minima: float = Form(1),
     costo_unitario: float = Form(0),
     unidad: str = Form("unidad"),
+    rendimiento_usos: float = Form(1.0),
+    unidad_rendimiento: str = Form("aplicaciones"),
     db: Session = Depends(get_db)
 ):
     p = models.ProductoStock(
         nombre=nombre, categoria=categoria,
         cantidad_actual=cantidad_actual, cantidad_minima=cantidad_minima,
-        costo_unitario=costo_unitario, unidad=unidad
+        costo_unitario=costo_unitario, unidad=unidad,
+        rendimiento_usos=max(rendimiento_usos, 1),
+        unidad_rendimiento=unidad_rendimiento.strip() or "aplicaciones",
     )
     db.add(p)
     db.commit()
@@ -135,6 +139,8 @@ def actualizar_producto(
     cantidad_minima: float = Form(1),
     costo_unitario: float = Form(0),
     unidad: str = Form("unidad"),
+    rendimiento_usos: float = Form(1.0),
+    unidad_rendimiento: str = Form("aplicaciones"),
     db: Session = Depends(get_db)
 ):
     p = db.query(models.ProductoStock).filter_by(id=producto_id).first()
@@ -145,6 +151,8 @@ def actualizar_producto(
     p.cantidad_minima = cantidad_minima
     p.costo_unitario = costo_unitario
     p.unidad = unidad
+    p.rendimiento_usos = max(rendimiento_usos, 1)
+    p.unidad_rendimiento = unidad_rendimiento.strip() or "aplicaciones"
     diferencia = cantidad_actual - p.cantidad_actual
     if diferencia != 0:
         p.cantidad_actual = cantidad_actual

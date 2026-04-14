@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Configuración{% endblock %}
+{% block header_title %}Configuración del negocio{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb"><span class="bc-current">Configuración</span></nav>
+{% endblock %}
+
+{% block content %}
+
+<!-- KPI total mensual -->
+<div class="cards-grid cards-grid-sm" style="margin-bottom:1.5rem">
+  <div class="card card-primary">
+    <div class="card-label">Costos fijos mensuales</div>
+    <div class="card-value">{{ total_mensual | pesos }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Costo fijo por hora productiva</div>
+    <div class="card-value">{{ costo_hora | pesos }}</div>
+    <div class="card-sub">según parámetros configurados</div>
+  </div>
+</div>
+
+<div class="two-col">
+
+  <!-- ── Panel A: Costos Fijos ─────────────────────────────────────── -->
+  <div>
+    <div class="panel">
+      <h3 style="margin-top:0">Costos fijos mensuales</h3>
+
+      {% if costos %}
+      <table class="tabla" style="margin-bottom:1rem">
+        <thead>
+          <tr><th>Nombre</th><th>Categoría</th><th>Monto</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for c in costos %}
+          <tr id="fila-{{ c.id }}">
+            <!-- Vista normal -->
+            <td class="vista-{{ c.id }}"><strong>{{ c.nombre }}</strong></td>
+            <td class="vista-{{ c.id }}"><span class="badge badge-neutral">{{ c.categoria }}</span></td>
+            <td class="vista-{{ c.id }} td-price">{{ c.monto | pesos }}</td>
+            <td class="vista-{{ c.id }} td-actions">
+              <button type="button" class="btn btn-sm btn-ghost"
+                      onclick="editarFila({{ c.id }}, '{{ c.nombre }}', {{ c.monto }}, '{{ c.categoria }}')">
+                Editar
+              </button>
+              <form method="post" action="/costos/{{ c.id }}/eliminar" style="display:inline"
+                    onsubmit="return confirm('¿Eliminar {{ c.nombre }}?')">
+                <button type="submit" class="btn btn-sm btn-danger-ghost">✕</button>
+              </form>
+            </td>
+
+            <!-- Vista edición (oculta) -->
+            <td class="edicion-{{ c.id }}" style="display:none" colspan="4">
+              <form method="post" action="/costos/{{ c.id }}/editar"
+                    style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+                <input type="text" name="nombre" value="{{ c.nombre }}" required
+                       style="flex:2;min-width:120px;padding:.35rem .6rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+                <input type="number" name="monto" value="{{ c.monto | int }}" required min="0" step="1"
+                       style="width:110px;padding:.35rem .6rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+                <select name="categoria"
+                        style="padding:.35rem .6rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+                  {% for cat in categorias %}
+                  <option value="{{ cat }}" {% if cat == c.categoria %}selected{% endif %}>{{ cat | capitalize }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
+                <button type="button" class="btn btn-sm btn-ghost" onclick="cancelarEdicion({{ c.id }})">Cancelar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty-msg" style="margin-bottom:1rem">No hay costos fijos cargados.</p>
+      {% endif %}
+
+      <!-- Formulario agregar -->
+      <form method="post" action="/costos/nuevo">
+        <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="flex:2;min-width:140px;margin:0">
+            <label style="font-size:.8rem">Nombre</label>
+            <input type="text" name="nombre" placeholder="Ej: Alquiler" required
+                   style="width:100%;padding:.4rem .7rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+          </div>
+          <div class="form-group" style="width:110px;margin:0">
+            <label style="font-size:.8rem">Monto $</label>
+            <input type="number" name="monto" min="0" step="1" placeholder="0" required
+                   style="width:100%;padding:.4rem .7rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:.8rem">Categoría</label>
+            <select name="categoria"
+                    style="padding:.4rem .7rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+              {% for cat in categorias %}
+              <option value="{{ cat }}">{{ cat | capitalize }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="align-self:flex-end">+ Agregar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Panel B: Parámetros de trabajo ───────────────────────────── -->
+  <div>
+    <div class="panel">
+      <h3 style="margin-top:0">Parámetros de trabajo</h3>
+      <p class="text-muted" style="font-size:.85rem;margin-bottom:1rem">
+        Estos valores se usan para calcular cuánto cuesta cada hora productiva y el margen real de cada servicio.
+      </p>
+
+      <form method="post" action="/costos/configuracion">
+        <div class="form-group">
+          <label>Días trabajados por mes</label>
+          <input type="number" name="dias_trabajo_mes" min="1" max="31" step="1"
+                 value="{{ config.dias_trabajo_mes if config else 22 }}">
+          <small class="form-hint">Típicamente entre 20 y 26 días.</small>
+        </div>
+        <div class="form-group">
+          <label>Horas de trabajo por día</label>
+          <input type="number" name="horas_dia" min="0.5" max="24" step="0.5"
+                 value="{{ config.horas_dia if config else 7.0 }}">
+        </div>
+        <div class="form-group">
+          <label>Ocupación estimada: <strong id="pctLabel">{{ ((config.pct_ocupacion if config else 0.75) * 100) | int }}%</strong></label>
+          <input type="range" name="pct_ocupacion" min="10" max="100" step="5"
+                 value="{{ ((config.pct_ocupacion if config else 0.75) * 100) | int }}"
+                 oninput="document.getElementById('pctLabel').textContent = this.value + '%'">
+          <small class="form-hint">Qué porcentaje del tiempo disponible está ocupado con clientes.</small>
+        </div>
+
+        <div class="panel" style="background:var(--bg);margin:1rem 0">
+          <div style="font-size:.85rem;color:var(--text-muted)">Resultado calculado</div>
+          <div style="font-size:1.4rem;font-weight:700;margin-top:.25rem">
+            Costo fijo por hora: {{ costo_hora | pesos }}
+          </div>
+          {% if total_mensual == 0 %}
+          <small class="text-muted">Cargá costos fijos para ver el cálculo.</small>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Guardar parámetros</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function editarFila(id, nombre, monto, cat) {
+  document.querySelectorAll('.vista-' + id).forEach(function(el) { el.style.display = 'none'; });
+  document.querySelectorAll('.edicion-' + id).forEach(function(el) { el.style.display = ''; });
+}
+function cancelarEdicion(id) {
+  document.querySelectorAll('.vista-' + id).forEach(function(el) { el.style.display = ''; });
+  document.querySelectorAll('.edicion-' + id).forEach(function(el) { el.style.display = 'none'; });
+}
+</script>
+{% endblock %}
