@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block header_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <form method="post" class="form-card">
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label for="nombre">Nombre del producto *</label>
+        <input type="text" id="nombre" name="nombre" required
+               value="{{ producto.nombre if producto else '' }}" placeholder="Ej: Esmalte semipermanente (set 12u)">
+      </div>
+      <div class="form-group">
+        <label for="categoria">Categoría</label>
+        <select id="categoria" name="categoria">
+          {% for cat in categorias %}
+          <option value="{{ cat.nombre }}"
+            {% if (producto and producto.categoria == cat.nombre) or (not producto and cat.nombre == 'General') %}selected{% endif %}>
+            {{ cat.nombre }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="cantidad_actual">Cantidad actual *</label>
+        <input type="number" id="cantidad_actual" name="cantidad_actual" step="0.01" min="0" required
+               value="{{ producto.cantidad_actual if producto else 0 }}">
+      </div>
+      <div class="form-group">
+        <label for="cantidad_minima">Cantidad mínima</label>
+        <input type="number" id="cantidad_minima" name="cantidad_minima" step="0.01" min="0"
+               value="{{ producto.cantidad_minima if producto else 1 }}">
+        <small class="form-hint">Se mostrará alerta cuando la cantidad baje de este valor.</small>
+      </div>
+      <div class="form-group">
+        <label for="unidad">Unidad</label>
+        <input type="text" id="unidad" name="unidad" list="unidades-list"
+               value="{{ producto.unidad if producto else 'unidad' }}" placeholder="unidad">
+        <datalist id="unidades-list">
+          <option value="unidad"><option value="litro"><option value="ml">
+          <option value="gramo"><option value="pote"><option value="caja">
+          <option value="set"><option value="rollo"><option value="pack">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label for="costo_unitario">Costo unitario ($)</label>
+        <input type="number" id="costo_unitario" name="costo_unitario" step="1" min="0"
+               value="{{ producto.costo_unitario | int if producto else 0 }}">
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a href="/stock" class="btn btn-ghost">Cancelar</a>
+      {% if producto %}
+      <button type="button" class="btn btn-danger"
+              onclick="if(confirm('¿Eliminar {{ producto.nombre }}? Esta acción no se puede deshacer.')) document.getElementById('formEliminar').submit()">
+        Eliminar producto
+      </button>
+      {% endif %}
+      <button type="submit" class="btn btn-primary">
+        {{ 'Guardar cambios' if producto else 'Agregar producto' }}
+      </button>
+    </div>
+  </form>
+
+  {% if producto %}
+  <form id="formEliminar" method="post" action="/stock/{{ producto.id }}/eliminar" style="display:none"></form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block header_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <form method="post" class="form-card">
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label for="nombre">Nombre del combo *</label>
+        <input type="text" id="nombre" name="nombre" required
+               value="{{ combo.nombre if combo else '' }}" placeholder="Ej: Mani + Pedi Express">
+      </div>
+      <div class="form-group">
+        <label for="precio">Precio ($) *</label>
+        <input type="number" id="precio" name="precio" required step="100" min="0"
+               value="{{ combo.precio | int if combo else '' }}" placeholder="8500">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="descripcion">Descripción</label>
+      <textarea id="descripcion" name="descripcion" rows="2"
+                placeholder="Breve descripción del combo...">{{ combo.descripcion if combo else '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Servicios incluidos *</label>
+      <div class="checkbox-grid">
+        {% for s in servicios %}
+        <label class="checkbox-item {% if s.id in combo_ids %}checked{% endif %}">
+          <input type="checkbox" name="servicio_ids" value="{{ s.id }}"
+                 {% if s.id in combo_ids %}checked{% endif %}>
+          <span>{{ s.nombre }} <small>({{ s.precio | pesos }})</small></span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a href="/servicios" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Guardar combo</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

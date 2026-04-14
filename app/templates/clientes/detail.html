@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ cliente.nombre }}{% endblock %}
+{% block header_title %}Ficha de cliente{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb">
+  <a href="/clientes">Clientes</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">{{ cliente.nombre }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="two-col">
+  <!-- Info del cliente -->
+  <div class="panel">
+    <div class="cliente-header">
+      <div class="cliente-avatar-lg">{{ cliente.nombre[0] if cliente.nombre else "?" }}</div>
+      <div>
+        <h2>{{ cliente.nombre }}</h2>
+        {% if cliente.telefono %}
+        <p>📞 {{ cliente.telefono }}</p>
+        {% endif %}
+        {% if cliente.fecha_nacimiento %}
+        <p>🎂 {{ cliente.fecha_nacimiento.strftime('%d de %B') }}</p>
+        {% endif %}
+        <p class="text-muted">Cliente desde {{ cliente.created_at.strftime('%B %Y') }}</p>
+      </div>
+    </div>
+
+    {% if cliente.notas %}
+    <div class="nota-box">
+      <strong>Notas:</strong> {{ cliente.notas }}
+    </div>
+    {% endif %}
+
+    <div class="stat-row">
+      <div class="stat-item">
+        <div class="stat-value">{{ ventas | length }}</div>
+        <div class="stat-label">visitas</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ total_gastado | pesos }}</div>
+        <div class="stat-label">total gastado</div>
+      </div>
+    </div>
+
+    <div class="form-actions" style="margin-top:1rem">
+      <a href="/clientes/{{ cliente.id }}/editar" class="btn btn-outline">Editar</a>
+      <form method="post" action="/clientes/{{ cliente.id }}/eliminar"
+            onsubmit="return confirm('¿Eliminar esta cliente?')">
+        <button type="submit" class="btn btn-danger">Eliminar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Historial de ventas -->
+  <div class="panel">
+    <h3>Historial de servicios</h3>
+    {% if ventas %}
+    <div class="historial-list">
+      {% for venta in ventas %}
+      <div class="historial-item">
+        <div class="historial-fecha">{{ venta.fecha_hora.strftime('%d/%m/%Y') }}</div>
+        <div class="historial-servicios">
+          {% for item in venta.items %}
+          <span class="tag">{{ item.nombre_servicio }}</span>
+          {% endfor %}
+        </div>
+        <div class="historial-total">{{ venta.total | pesos }}</div>
+        <div class="historial-pago badge-pago badge-pago-{{ venta.forma_pago }}">{{ venta.forma_pago }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-msg">Aún no hay servicios registrados.</p>
+    {% endif %}
+    <div style="margin-top:1rem">
+      <a href="/ventas/nueva?cliente_id={{ cliente.id }}" class="btn btn-primary btn-sm">+ Nueva venta para esta cliente</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

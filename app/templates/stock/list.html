@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Stock{% endblock %}
+{% block header_title %}Inventario de Stock{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb"><span class="bc-current">Stock</span></nav>
+{% endblock %}
+
+{% block content %}
+{% if alertas %}
+<div class="alerta-banner">
+  ⚠️ <strong>{{ alertas | length }} producto(s) bajo el mínimo:</strong>
+  {% for p in alertas %}
+  <a href="/stock/{{ p.id }}" class="alerta-link">{{ p.nombre }}</a>{% if not loop.last %}, {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="page-actions">
+  <h2 style="margin:0">Productos</h2>
+  <div style="display:flex;gap:.5rem">
+    <button type="button" class="btn btn-outline" onclick="toggleCategorias()">⚙ Categorías</button>
+    <a href="/stock/nuevo" class="btn btn-primary">+ Nuevo producto</a>
+  </div>
+</div>
+
+<!-- Panel gestión de categorías -->
+<div id="panelCategorias" class="panel" style="display:none;margin-bottom:1.5rem">
+  <h3 style="margin-top:0">Gestionar categorías</h3>
+  <table class="tabla tabla-sm" style="margin-bottom:1rem">
+    <thead><tr><th>Nombre</th><th></th></tr></thead>
+    <tbody>
+      {% for cat in todas_categorias %}
+      <tr>
+        <td>
+          <form method="post" action="/stock/categorias/{{ cat.id }}/editar"
+                style="display:flex;gap:.5rem;align-items:center">
+            <input type="text" name="nombre" value="{{ cat.nombre }}"
+                   style="flex:1;padding:.3rem .6rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+            <button type="submit" class="btn btn-sm btn-outline">Guardar</button>
+          </form>
+        </td>
+        <td style="width:60px;text-align:right">
+          <form method="post" action="/stock/categorias/{{ cat.id }}/eliminar"
+                onsubmit="return confirm('¿Eliminar categoría {{ cat.nombre }}? Los productos quedarán en General.')">
+            <button type="submit" class="btn btn-sm btn-danger-ghost">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" action="/stock/categorias/nueva" style="display:flex;gap:.5rem;align-items:center">
+    <input type="text" name="nombre" placeholder="Nueva categoría..." required
+           style="flex:1;padding:.4rem .75rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+    <button type="submit" class="btn btn-primary btn-sm">+ Agregar</button>
+  </form>
+</div>
+
+<script>
+function toggleCategorias() {
+  var p = document.getElementById('panelCategorias');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+
+{% if productos %}
+{% for cat in categorias | sort %}
+<h3 class="categoria-header">{{ cat }}</h3>
+<div class="panel" style="margin-bottom:1rem">
+  <table class="tabla">
+    <thead>
+      <tr><th>Producto</th><th>Stock actual</th><th>Mínimo</th><th>Costo unit.</th><th>Estado</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for p in productos if p.categoria == cat %}
+      <tr class="{% if p.cantidad_actual <= p.cantidad_minima %}row-alert{% endif %}">
+        <td><a href="/stock/{{ p.id }}" class="link-nombre">{{ p.nombre }}</a></td>
+        <td>
+          <strong>{{ p.cantidad_actual }}</strong> {{ p.unidad }}
+        </td>
+        <td>{{ p.cantidad_minima }} {{ p.unidad }}</td>
+        <td>{{ p.costo_unitario | pesos }}</td>
+        <td>
+          {% if p.cantidad_actual <= p.cantidad_minima %}
+          <span class="badge badge-alert">Bajo mínimo</span>
+          {% elif p.cantidad_actual <= p.cantidad_minima * 1.5 %}
+          <span class="badge badge-warn">Stock bajo</span>
+          {% else %}
+          <span class="badge badge-ok">OK</span>
+          {% endif %}
+        </td>
+        <td class="td-actions">
+          <a href="/stock/{{ p.id }}" class="btn btn-sm btn-outline">Ver</a>
+          <a href="/stock/{{ p.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">📦</div>
+  <p>No hay productos cargados.</p>
+  <a href="/stock/nuevo" class="btn btn-primary">Agregar primer producto</a>
+</div>
+{% endif %}
+{% endblock %}

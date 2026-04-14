@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Clientes{% endblock %}
+{% block header_title %}Clientes{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb"><span class="bc-current">Clientes</span></nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-actions">
+  <form class="search-form" method="get" action="/clientes">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre..." class="search-input" autocomplete="off">
+    <button type="submit" class="btn btn-outline">Buscar</button>
+    {% if q %}<a href="/clientes" class="btn btn-ghost">Limpiar</a>{% endif %}
+  </form>
+  <a href="/clientes/nuevo" class="btn btn-primary">+ Nueva cliente</a>
+</div>
+
+{% if clientes %}
+<div class="panel">
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Teléfono</th>
+        <th>Cumpleaños</th>
+        <th>Notas</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in clientes %}
+      <tr>
+        <td>
+          <a href="/clientes/{{ c.id }}" class="link-nombre">{{ c.nombre }}</a>
+        </td>
+        <td>{{ c.telefono or '—' }}</td>
+        <td>
+          {% if c.fecha_nacimiento %}
+            {{ c.fecha_nacimiento.strftime('%d/%m') }}
+          {% else %}—{% endif %}
+        </td>
+        <td class="td-notas">{{ c.notas | truncate(50) if c.notas else '—' }}</td>
+        <td class="td-actions">
+          <a href="/clientes/{{ c.id }}" class="btn btn-sm btn-outline">Ver</a>
+          <a href="/clientes/{{ c.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">👤</div>
+  <p>No se encontraron clientes{% if q %} para "{{ q }}"{% endif %}.</p>
+  <a href="/clientes/nuevo" class="btn btn-primary">Agregar primera cliente</a>
+</div>
+{% endif %}
+{% endblock %}

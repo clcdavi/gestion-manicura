@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Servicios{% endblock %}
+{% block header_title %}Servicios y Combos{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb"><span class="bc-current">Servicios</span></nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-actions">
+  <h2 style="margin:0">Servicios</h2>
+  <div>
+    <a href="/servicios/combos/nuevo" class="btn btn-outline">+ Nuevo combo</a>
+    <a href="/servicios/nuevo" class="btn btn-primary">+ Nuevo servicio</a>
+  </div>
+</div>
+
+<div class="panel">
+  {% if servicios %}
+  <table class="tabla">
+    <thead>
+      <tr><th>Nombre</th><th>Precio</th><th>Duración</th><th>Descripción</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for s in servicios %}
+      <tr>
+        <td><strong>{{ s.nombre }}</strong></td>
+        <td class="td-price">{{ s.precio | pesos }}</td>
+        <td>{{ s.duracion_min }} min</td>
+        <td class="td-notas">{{ s.descripcion | truncate(60) if s.descripcion else '—' }}</td>
+        <td class="td-actions">
+          <a href="/servicios/{{ s.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
+          <form method="post" action="/servicios/{{ s.id }}/eliminar" style="display:inline"
+                onsubmit="return confirm('¿Eliminar {{ s.nombre }}?')">
+            <button type="submit" class="btn btn-sm btn-danger-ghost">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-msg">No hay servicios cargados.</p>
+  {% endif %}
+</div>
+
+{% if combos %}
+<h2 style="margin-top:2rem">Combos</h2>
+<div class="panel">
+  <table class="tabla">
+    <thead>
+      <tr><th>Nombre</th><th>Precio</th><th>Incluye</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in combos %}
+      <tr>
+        <td><strong>{{ c.nombre }}</strong></td>
+        <td class="td-price">{{ c.precio | pesos }}</td>
+        <td>
+          {% for item in c.items %}
+          <span class="tag">{{ item.servicio.nombre }}</span>
+          {% endfor %}
+        </td>
+        <td class="td-actions">
+          <a href="/servicios/combos/{{ c.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
+          <form method="post" action="/servicios/combos/{{ c.id }}/eliminar" style="display:inline"
+                onsubmit="return confirm('¿Eliminar combo {{ c.nombre }}?')">
+            <button type="submit" class="btn btn-sm btn-danger-ghost">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

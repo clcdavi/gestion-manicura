@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ producto.nombre }}{% endblock %}
+{% block header_title %}Detalle de producto{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb">
+  <a href="/stock">Stock</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">{{ producto.nombre | truncate(40) }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="two-col">
+  <div class="panel">
+    <h2>{{ producto.nombre }}</h2>
+    <p class="text-muted">Categoría: {{ producto.categoria }}</p>
+
+    <div class="stat-row">
+      <div class="stat-item">
+        <div class="stat-value {% if producto.cantidad_actual <= producto.cantidad_minima %}text-alert{% endif %}">
+          {{ producto.cantidad_actual }}
+        </div>
+        <div class="stat-label">{{ producto.unidad }} en stock</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ producto.cantidad_minima }}</div>
+        <div class="stat-label">mínimo</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ producto.costo_unitario | pesos }}</div>
+        <div class="stat-label">costo unitario</div>
+      </div>
+    </div>
+
+    {% if producto.cantidad_actual <= producto.cantidad_minima %}
+    <div class="alerta-banner" style="margin-top:1rem">
+      ⚠️ Este producto está por debajo del mínimo. ¡Reponerlo pronto!
+    </div>
+    {% endif %}
+
+    <!-- Ajuste de stock -->
+    <div style="margin-top:1.5rem">
+      <h3>Ajustar stock</h3>
+      <form method="post" action="/stock/{{ producto.id }}/ajuste" class="inline-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cantidad (+ entrada / - salida)</label>
+            <input type="number" name="cantidad" step="0.01" placeholder="+5 ó -2" required>
+          </div>
+          <div class="form-group" style="flex:2">
+            <label>Motivo</label>
+            <input type="text" name="descripcion" placeholder="Ej: Compra nueva" value="Ajuste manual">
+          </div>
+          <div class="form-group" style="align-self:flex-end">
+            <button type="submit" class="btn btn-primary">Ajustar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="form-actions" style="margin-top:1rem">
+      <a href="/stock/{{ producto.id }}/editar" class="btn btn-outline">Editar producto</a>
+      <form method="post" action="/stock/{{ producto.id }}/eliminar"
+            onsubmit="return confirm('¿Eliminar este producto?')">
+        <button type="submit" class="btn btn-danger">Eliminar</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Historial de movimientos</h3>
+    {% if movimientos %}
+    <table class="tabla tabla-sm">
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Descripción</th></tr></thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr>
+          <td>{{ m.fecha | ar_fecha_hora }}</td>
+          <td><span class="badge badge-neutral">{{ m.tipo }}</span></td>
+          <td class="{% if m.cantidad < 0 %}text-alert{% else %}text-success{% endif %}">
+            {% if m.cantidad > 0 %}+{% endif %}{{ m.cantidad }}
+          </td>
+          <td>{{ m.descripcion }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-msg">Sin movimientos registrados.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block header_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <form method="post" class="form-card">
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label for="nombre">Nombre del servicio *</label>
+        <input type="text" id="nombre" name="nombre" required
+               value="{{ servicio.nombre if servicio else '' }}" placeholder="Ej: Esmaltado semipermanente">
+      </div>
+      <div class="form-group">
+        <label for="precio">Precio ($) *</label>
+        <input type="number" id="precio" name="precio" required step="100" min="0"
+               value="{{ servicio.precio | int if servicio else '' }}" placeholder="8000">
+      </div>
+      <div class="form-group">
+        <label for="duracion_min">Duración (min)</label>
+        <input type="number" id="duracion_min" name="duracion_min" min="5" step="5"
+               value="{{ servicio.duracion_min if servicio else 60 }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="descripcion">Descripción</label>
+      <textarea id="descripcion" name="descripcion" rows="2"
+                placeholder="Breve descripción del servicio...">{{ servicio.descripcion if servicio else '' }}</textarea>
+    </div>
+
+    {% if productos %}
+    <div class="form-group">
+      <label>Consumo de stock (opcional)</label>
+      <p class="form-hint">Indicá cuánto consume este servicio de cada producto. Se descontará automáticamente al registrar una venta.</p>
+      <div class="productos-grid">
+        {% for p in productos %}
+        <div class="producto-row">
+          <label class="producto-label">{{ p.nombre }}</label>
+          <input type="number" name="prod_{{ p.id }}" step="0.01" min="0"
+                 value="{{ consumos.get(p.id, '') }}"
+                 placeholder="0" class="input-consumo">
+          <span class="text-muted">{{ p.unidad }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="form-actions">
+      <a href="/servicios" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary">
+        {{ 'Guardar cambios' if servicio else 'Crear servicio' }}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

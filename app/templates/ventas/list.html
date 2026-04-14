@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Ventas del día{% endblock %}
+{% block header_title %}Ventas del día{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb"><span class="bc-current">Ventas del día</span></nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-actions">
+  <form class="search-form" method="get" action="/ventas">
+    <label>Fecha:</label>
+    <input type="date" name="fecha" value="{{ fecha }}" max="{{ hoy }}" class="input-date">
+    <button type="submit" class="btn btn-outline">Ver</button>
+    {% if fecha != hoy %}
+    <a href="/ventas" class="btn btn-ghost">Hoy</a>
+    {% endif %}
+  </form>
+  <a href="/ventas/nueva" class="btn btn-primary">+ Nueva venta</a>
+</div>
+
+<!-- Resumen rápido -->
+<div class="cards-grid cards-grid-sm">
+  <div class="card card-primary">
+    <div class="card-label">Total</div>
+    <div class="card-value">{{ total_dia | pesos }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Ventas</div>
+    <div class="card-value">{{ ventas | length }}</div>
+  </div>
+</div>
+
+{% if ventas %}
+<div class="panel">
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Hora</th>
+        <th>Cliente</th>
+        <th>Servicios</th>
+        <th>Total</th>
+        <th>Pago</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in ventas %}
+      <tr>
+        <td>{{ v.fecha_hora | ar_hora }}</td>
+        <td>
+          {% if v.cliente %}
+          <a href="/clientes/{{ v.cliente.id }}" class="link-nombre">{{ v.cliente.nombre }}</a>
+          {% else %}
+          <button type="button" class="btn btn-sm btn-ghost"
+                  onclick="abrirModalAsignar({{ v.id }})">+ Asignar</button>
+          {% endif %}
+        </td>
+        <td>
+          {% for item in v.items %}
+          <span class="tag">{{ item.nombre_servicio }}</span>
+          {% endfor %}
+        </td>
+        <td class="td-price">
+          {{ v.total | pesos }}
+          {% if v.descuento and v.descuento > 0 %}
+          <div style="font-size:.75rem;color:var(--success)">
+            -{{ v.descuento | pesos }}
+            {% if v.descuento_motivo %}<span class="text-muted">({{ v.descuento_motivo }})</span>{% endif %}
+          </div>
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge-pago badge-pago-{{ v.forma_pago }}">{{ v.forma_pago }}</span>
+        </td>
+        <td class="td-actions">
+          <button type="button" class="btn btn-sm btn-danger-ghost"
+                  onclick="abrirModalEliminar({{ v.id }})">✕</button>
+          <form method="post" action="/ventas/{{ v.id }}/eliminar"
+                id="form-eliminar-{{ v.id }}" style="display:none"></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">💰</div>
+  <p>No hay ventas registradas para este día.</p>
+  <a href="/ventas/nueva" class="btn btn-primary">Registrar primera venta</a>
+</div>
+{% endif %}
+
+<!-- ── Modal: Eliminar con doble confirmación ───────────────────────────── -->
+<div id="modalEliminar" class="modal-overlay" style="display:none" onclick="cerrarModalEliminar(event)">
+  <div class="modal-box">
+    <h3 style="margin-top:0">Eliminar venta</h3>
+    <p class="text-muted">Esta acción no se puede deshacer. Para confirmar, escribí <strong>ELIMINAR</strong> en mayúsculas.</p>
+    <input type="text" id="inputConfirmarEliminar" placeholder="ELIMINAR"
+           oninput="verificarEliminar(this.value)"
+           style="width:100%;margin:.75rem 0;font-size:1rem;padding:.5rem .75rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">
+    <div style="display:flex;gap:.75rem;justify-content:flex-end">
+      <button type="button" class="btn btn-ghost" onclick="cerrarModalEliminar()">Cancelar</button>
+      <button type="button" class="btn btn-danger" id="btnConfirmarEliminar"
+              disabled onclick="ejecutarEliminar()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Asignar cliente ────────────────────────────────────────────── -->
+<div id="modalAsignar" class="modal-overlay" style="display:none" onclick="cerrarModalAsignar(event)">
+  <div class="modal-box">
+    <h3 style="margin-top:0">Asignar cliente</h3>
+    <form id="formAsignar" method="post">
+      <div class="form-group">
+        <label>Seleccioná un cliente</label>
+        <select name="cliente_id" required
+                style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:1rem">
+          <option value="">— Elegir cliente —</option>
+          {% for c in clientes %}
+          <option value="{{ c.id }}">{{ c.nombre }}{% if c.telefono %} · {{ c.telefono }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModalAsignar()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Asignar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-box {
+  background: var(--surface); border-radius: 12px; padding: 1.5rem;
+  width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+</style>
+
+<script>
+var _ventaIdEliminar = null;
+
+function abrirModalEliminar(id) {
+  _ventaIdEliminar = id;
+  document.getElementById('inputConfirmarEliminar').value = '';
+  document.getElementById('btnConfirmarEliminar').disabled = true;
+  document.getElementById('modalEliminar').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('inputConfirmarEliminar').focus(); }, 50);
+}
+
+function cerrarModalEliminar(e) {
+  if (!e || e.target === document.getElementById('modalEliminar')) {
+    document.getElementById('modalEliminar').style.display = 'none';
+    _ventaIdEliminar = null;
+  }
+}
+
+function verificarEliminar(val) {
+  document.getElementById('btnConfirmarEliminar').disabled = (val !== 'ELIMINAR');
+}
+
+function ejecutarEliminar() {
+  if (_ventaIdEliminar) {
+    document.getElementById('form-eliminar-' + _ventaIdEliminar).submit();
+  }
+}
+
+function abrirModalAsignar(id) {
+  document.getElementById('formAsignar').action = '/ventas/' + id + '/asignar-cliente';
+  document.getElementById('formAsignar').querySelector('select').value = '';
+  document.getElementById('modalAsignar').style.display = 'flex';
+}
+
+function cerrarModalAsignar(e) {
+  if (!e || e.target === document.getElementById('modalAsignar')) {
+    document.getElementById('modalAsignar').style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

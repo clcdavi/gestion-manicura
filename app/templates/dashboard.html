@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block header_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- KPIs -->
+<div class="cards-grid">
+  <div class="card card-primary">
+    <div class="card-label">Hoy</div>
+    <div class="card-value">{{ ingresos_hoy | pesos }}</div>
+    <div class="card-sub">ingresos del día</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Esta semana</div>
+    <div class="card-value">{{ ingresos_semana | pesos }}</div>
+    <div class="card-sub">desde el lunes</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Este mes</div>
+    <div class="card-value">{{ ingresos_mes | pesos }}</div>
+    <div class="card-sub">mes en curso</div>
+  </div>
+  {% if alertas_stock > 0 %}
+  <div class="card card-alert">
+    <div class="card-label">⚠ Stock bajo</div>
+    <div class="card-value">{{ alertas_stock }}</div>
+    <div class="card-sub"><a href="/stock" style="color:inherit;font-weight:600">Ver productos →</a></div>
+  </div>
+  {% else %}
+  <div class="card card-success">
+    <div class="card-label">Stock</div>
+    <div class="card-value">✓</div>
+    <div class="card-sub">todo en orden</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Gráfico principal full-width + datos secundarios -->
+<div class="dashboard-main">
+  <div class="chart-card chart-card-main">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem">
+      <h3 style="margin:0">Ingresos por día</h3>
+      <form method="get" action="/" id="formRango" style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+        <div class="btn-group-rango">
+          {% for r, label in [('7d','7 días'),('30d','30 días'),('mes','Este mes'),('custom','Personalizado')] %}
+          <button type="submit" name="rango" value="{{ r }}"
+                  class="btn btn-sm {% if rango == r %}btn-primary{% else %}btn-ghost{% endif %}">
+            {{ label }}
+          </button>
+          {% endfor %}
+        </div>
+        {% if rango == 'custom' %}
+        <input type="date" name="desde" value="{{ chart_desde }}" max="{{ hoy }}"
+               class="input-date" style="font-size:.85rem" onchange="this.form.submit()">
+        <span class="text-muted">→</span>
+        <input type="date" name="hasta" value="{{ chart_hasta }}" max="{{ hoy }}"
+               class="input-date" style="font-size:.85rem" onchange="this.form.submit()">
+        {% else %}
+        <input type="hidden" name="desde" value="">
+        <input type="hidden" name="hasta" value="">
+        {% endif %}
+      </form>
+    </div>
+    <canvas id="chartIngresos" height="90"></canvas>
+  </div>
+</div>
+
+<!-- Dos columnas: servicios top | cliente + stock -->
+<div class="two-col">
+  <div class="panel">
+    <h3>Top servicios del mes</h3>
+    {% if top_servicios %}
+    <table class="tabla">
+      <thead><tr><th>#</th><th>Servicio</th><th>Veces</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for nombre, cant in top_servicios %}
+        <tr>
+          <td class="text-muted">{{ loop.index }}</td>
+          <td>{{ nombre }}</td>
+          <td><span class="badge badge-neutral">{{ cant }}</span></td>
+          <td class="td-price">{{ ingresos_por_servicio[nombre] | pesos }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-msg">Sin datos este mes.</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <!-- Cliente frecuente -->
+    <div class="panel">
+      <h3>Cliente frecuente del mes</h3>
+      {% if cliente_top %}
+      <div class="cliente-top-card">
+        <div class="cliente-top-avatar">{{ cliente_top.cliente.nombre[0] if cliente_top.cliente.nombre else "?" }}</div>
+        <div>
+          <div class="cliente-top-nombre">{{ cliente_top.cliente.nombre }}</div>
+          <div class="cliente-top-dato">{{ cliente_top.visitas }} visita(s) este mes</div>
+          <a href="/clientes/{{ cliente_top.cliente.id }}" class="btn btn-sm btn-outline">Ver perfil →</a>
+        </div>
+      </div>
+      {% else %}
+      <p class="empty-msg">Sin datos este mes.</p>
+      {% endif %}
+    </div>
+
+    <!-- Forma de pago: gráfico + proyección juntos -->
+    <div class="panel">
+      <h3>Forma de pago</h3>
+      {% if pago_data %}
+      <canvas id="chartPago" height="140"></canvas>
+      {% else %}
+      <p class="empty-msg">Sin ventas este mes.</p>
+      {% endif %}
+    </div>
+
+    <!-- Stock crítico -->
+    {% if proyeccion_stock %}
+    <div class="panel">
+      <h3>Proyección de stock</h3>
+      <table class="tabla tabla-sm">
+        <thead><tr><th>Producto</th><th>Cant.</th><th>Días</th></tr></thead>
+        <tbody>
+          {% for item in proyeccion_stock %}
+          <tr class="{% if item.critico %}row-alert{% endif %}">
+            <td>{{ item.producto.nombre | truncate(28) }}</td>
+            <td class="text-muted">{{ item.producto.cantidad_actual }}</td>
+            <td>
+              {% if item.dias is not none %}
+                {% if item.dias <= 7 %}<span class="badge badge-alert">{{ item.dias }}d</span>
+                {% else %}<span class="badge badge-neutral">{{ item.dias }}d</span>{% endif %}
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Análisis de márgenes -->
+<div class="panel" style="margin-top:2rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+    <h3 style="margin:0">Análisis de rentabilidad por servicio</h3>
+    <span class="text-muted" style="font-size:.8rem">Basado en costos de insumos configurados</span>
+  </div>
+
+  {% set perdidas    = margenes | selectattr("estado","eq","perdida")   | list %}
+  {% set criticos    = margenes | selectattr("estado","eq","critico")   | list %}
+  {% set bajos       = margenes | selectattr("estado","eq","bajo")      | list %}
+  {% set sin_datos   = margenes | selectattr("estado","eq","sin_datos") | list %}
+
+  {% if perdidas %}
+  <div class="alerta-banner" style="margin-bottom:1rem">
+    🚨 <strong>{{ perdidas|length }} servicio(s) con pérdida:</strong>
+    {% for m in perdidas %}
+    <strong>{{ m.servicio.nombre }}</strong> (cuesta {{ m.costo | pesos }}, se cobra {{ m.servicio.precio | pesos }}){% if not loop.last %}, {% endif %}
+    {% endfor %}
+    — Subí el precio urgente.
+  </div>
+  {% endif %}
+
+  {% if criticos %}
+  <div class="alerta-banner alerta-warn" style="margin-bottom:1rem">
+    ⚠️ <strong>{{ criticos|length }} servicio(s) con margen menor al 20%</strong> — Revisar precios.
+  </div>
+  {% endif %}
+
+  {% if margenes %}
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Servicio</th>
+        <th>Precio cobrado</th>
+        <th>Costo insumos</th>
+        <th>Ganancia</th>
+        <th>Margen</th>
+        <th>Estado</th>
+        <th>Recomendación</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in margenes %}
+      <tr class="{% if m.estado == 'perdida' %}row-alert{% endif %}">
+        <td><strong>{{ m.servicio.nombre }}</strong></td>
+        <td class="td-price">{{ m.servicio.precio | pesos }}</td>
+        <td class="td-price {% if m.sin_costos %}text-muted{% endif %}">
+          {% if m.sin_costos %}—{% else %}{{ m.costo | pesos }}{% endif %}
+        </td>
+        <td class="td-price {% if m.margen < 0 %}text-alert{% elif not m.sin_costos %}text-success{% endif %}">
+          {% if m.sin_costos %}—{% else %}{{ m.margen | pesos }}{% endif %}
+        </td>
+        <td>
+          {% if m.sin_costos %}
+          <span class="text-muted">—</span>
+          {% else %}
+          <div style="display:flex;align-items:center;gap:.5rem">
+            <div style="flex:1;background:var(--border);border-radius:4px;height:8px;min-width:60px">
+              <div style="width:{{ [[m.margen_pct,0]|max, 100]|min }}%;background:{% if m.margen_pct < 0 %}var(--danger){% elif m.margen_pct < 20 %}#F59E0B{% elif m.margen_pct < 40 %}#10B981{% else %}#10B981{% endif %};border-radius:4px;height:8px"></div>
+            </div>
+            <span style="font-size:.85rem;font-weight:600">{{ "%.0f" | format(m.margen_pct) }}%</span>
+          </div>
+          {% endif %}
+        </td>
+        <td>
+          {% if m.estado == "perdida" %}
+            <span class="badge badge-alert">Pérdida</span>
+          {% elif m.estado == "critico" %}
+            <span class="badge badge-alert">Crítico</span>
+          {% elif m.estado == "bajo" %}
+            <span class="badge badge-warn">Bajo</span>
+          {% elif m.estado == "ok" %}
+            <span class="badge badge-ok">Saludable</span>
+          {% else %}
+            <span class="badge badge-neutral">Sin costos</span>
+          {% endif %}
+        </td>
+        <td style="font-size:.82rem;color:var(--text-muted)">
+          {% if m.estado == "perdida" %}
+            🚨 Subir precio mínimo a {{ (m.costo * 1.3) | pesos }}
+          {% elif m.estado == "critico" %}
+            ⚠️ Considerar subir a {{ (m.costo / 0.8) | pesos }}
+          {% elif m.estado == "bajo" %}
+            💡 Podría subir a {{ (m.costo / 0.6) | pesos }}
+          {% elif m.estado == "ok" %}
+            ✓ Precio adecuado
+          {% else %}
+            Configurar insumos del servicio
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-msg">No hay servicios activos.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Leer el color primario del tema activo
+var style = getComputedStyle(document.documentElement);
+var colorPrimary = style.getPropertyValue('--primary').trim() || '#5B6CF6';
+var colorBg      = style.getPropertyValue('--bg').trim()      || '#F1F5F9';
+var colorBorder  = style.getPropertyValue('--border').trim()  || '#E2E8F0';
+
+// Gráfico de barras
+new Chart(document.getElementById('chartIngresos').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: {{ labels_chart | tojson }},
+    datasets: [{
+      data: {{ data_chart | tojson }},
+      backgroundColor: colorPrimary + '33',
+      borderColor: colorPrimary,
+      borderWidth: 2,
+      borderRadius: 8,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        beginAtZero: true,
+        grid: { color: colorBorder },
+        ticks: { callback: function(v){ return '$' + v.toLocaleString('es-AR'); } }
+      }
+    }
+  }
+});
+
+{% if pago_data %}
+new Chart(document.getElementById('chartPago').getContext('2d'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ pago_labels | tojson }},
+    datasets: [{
+      data: {{ pago_data | tojson }},
+      backgroundColor: ['#10B981','#5B6CF6','#F43F5E','#F59E0B'],
+      borderWidth: 0,
+      hoverOffset: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '65%',
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

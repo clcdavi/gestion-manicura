@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Caja Diaria{% endblock %}
+{% block header_title %}Cierre de Caja{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb">
+  <a href="/ventas">Ventas</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">Caja diaria</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-actions no-print">
+  <form class="search-form" method="get" action="/ventas/caja">
+    <label>Fecha:</label>
+    <input type="date" name="fecha" value="{{ fecha }}" max="{{ hoy }}" class="input-date">
+    <button type="submit" class="btn btn-outline">Ver</button>
+    {% if fecha != hoy %}<a href="/ventas/caja" class="btn btn-ghost">Hoy</a>{% endif %}
+  </form>
+  <button onclick="window.print()" class="btn btn-outline no-print">🖨 Imprimir</button>
+</div>
+
+<div class="caja-container">
+  <!-- Encabezado imprimible -->
+  <div class="caja-header">
+    <h2>Bella Studio — Cierre de caja</h2>
+    <p>{{ fecha }}</p>
+  </div>
+
+  <!-- Cards de resumen -->
+  <div class="cards-grid">
+    <div class="card card-primary">
+      <div class="card-label">Total del día</div>
+      <div class="card-value">{{ total | pesos }}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Ventas realizadas</div>
+      <div class="card-value">{{ ventas | length }}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Servicios prestados</div>
+      <div class="card-value">{{ cantidad_servicios }}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Ticket promedio</div>
+      <div class="card-value">{{ ticket_promedio | pesos }}</div>
+    </div>
+  </div>
+
+  <!-- Desglose por forma de pago -->
+  <div class="two-col">
+    <div class="panel">
+      <h3>Desglose por forma de pago</h3>
+      {% if por_forma %}
+      <table class="tabla">
+        <thead><tr><th>Forma de pago</th><th>Total</th><th>%</th></tr></thead>
+        <tbody>
+          {% for fp, monto in por_forma.items() %}
+          <tr>
+            <td><span class="badge-pago badge-pago-{{ fp }}">{{ fp }}</span></td>
+            <td class="td-price">{{ monto | pesos }}</td>
+            <td>
+              {% if total > 0 %}{{ "%.1f" | format(monto / total * 100) }}%{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr><td><strong>Total</strong></td><td class="td-price"><strong>{{ total | pesos }}</strong></td><td>100%</td></tr>
+        </tfoot>
+      </table>
+      {% else %}
+      <p class="empty-msg">Sin ventas registradas.</p>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h3>Detalle de ventas</h3>
+      {% if ventas %}
+      <table class="tabla tabla-sm">
+        <thead><tr><th>Hora</th><th>Cliente</th><th>Total</th><th>Pago</th></tr></thead>
+        <tbody>
+          {% for v in ventas %}
+          <tr>
+            <td>{{ v.fecha_hora | ar_hora }}</td>
+            <td>{{ v.cliente.nombre if v.cliente else 'Sin cliente' }}</td>
+            <td>{{ v.total | pesos }}</td>
+            <td><span class="badge-pago badge-pago-{{ v.forma_pago }}">{{ v.forma_pago }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty-msg">Sin ventas este día.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

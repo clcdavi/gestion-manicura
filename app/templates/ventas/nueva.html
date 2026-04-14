@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Nueva Venta{% endblock %}
+{% block header_title %}Nueva Venta{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+  <a href="/ventas">Ventas</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">Nueva venta</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<form method="post" action="/ventas/nueva" id="formVenta">
+  <div class="venta-layout">
+
+    <!-- Panel izquierdo: cliente y pago -->
+    <div class="venta-panel-left">
+
+      <!-- Cliente — sección destacada -->
+      <div class="panel panel-cliente">
+        <div class="panel-section-label">1 · Cliente</div>
+        <div class="cliente-search-wrap">
+          <input type="text" id="clienteSearch" placeholder="Buscar por nombre..." autocomplete="off">
+          <input type="hidden" name="cliente_id" id="clienteId">
+          <div id="clienteDropdown" class="dropdown-list"></div>
+        </div>
+        <div id="clienteSeleccionado" class="cliente-seleccionado" style="display:none"></div>
+        <p class="form-hint" style="margin-top:.4rem">Opcional — podés registrar sin cliente.</p>
+      </div>
+
+      <!-- Forma de pago -->
+      <div class="panel">
+        <div class="panel-section-label">2 · Forma de pago</div>
+        <div class="pago-options">
+          {% for fp in ['efectivo', 'transferencia', 'tarjeta', 'mixto'] %}
+          <label class="pago-option">
+            <input type="radio" name="forma_pago" value="{{ fp }}" {% if fp == 'efectivo' %}checked{% endif %}>
+            <span>{{ fp | capitalize }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Descuento -->
+      <div class="panel">
+        <div class="panel-section-label">Descuento</div>
+        <div class="pago-options" style="margin-bottom:.75rem">
+          <label class="pago-option">
+            <input type="radio" name="descuento_tipo" value="pesos" checked onchange="recalcularDescuento()">
+            <span>$ Monto fijo</span>
+          </label>
+          <label class="pago-option">
+            <input type="radio" name="descuento_tipo" value="porcentaje" onchange="recalcularDescuento()">
+            <span>% Porcentaje</span>
+          </label>
+        </div>
+        <div class="form-row" style="gap:.5rem">
+          <div class="form-group">
+            <input type="number" name="descuento_valor" id="descuentoValor" min="0" step="1"
+                   placeholder="0" oninput="recalcularDescuento()"
+                   style="width:100%">
+          </div>
+          <div class="form-group" style="flex:2">
+            <input type="text" name="descuento_motivo" placeholder="Motivo (opcional)...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Notas -->
+      <div class="panel">
+        <div class="panel-section-label">Notas</div>
+        <textarea name="notas" rows="2" placeholder="Observaciones opcionales..."></textarea>
+      </div>
+
+    </div>
+
+    <!-- Panel derecho: catálogo + items -->
+    <div class="venta-panel-right">
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-section-label">3 · Servicios</div>
+
+        <div class="catalogo-grid">
+          {% for s in servicios %}
+          <button type="button" class="catalogo-btn"
+                  onclick="agregarItem('{{ s.nombre }}', {{ s.precio }}, {{ s.id }})">
+            <span class="catalogo-nombre">{{ s.nombre }}</span>
+            <span class="catalogo-precio">{{ s.precio | pesos }}</span>
+          </button>
+          {% endfor %}
+          {% for c in combos %}
+          <button type="button" class="catalogo-btn catalogo-btn-combo"
+                  onclick="agregarItem('{{ c.nombre }}', {{ c.precio }}, '')">
+            <span class="catalogo-nombre">📦 {{ c.nombre }}</span>
+            <span class="catalogo-precio">{{ c.precio | pesos }}</span>
+          </button>
+          {% endfor %}
+        </div>
+
+        <!-- Items seleccionados -->
+        <div id="itemsContainer" style="margin-top:1.25rem">
+          <p class="empty-msg" id="emptyItems" style="padding:.5rem 0">
+            Tocá un servicio del catálogo para agregarlo ↑
+          </p>
+          <table class="tabla" id="tablaItems" style="display:none">
+            <thead>
+              <tr><th>Servicio</th><th style="width:130px">Precio</th><th style="width:44px"></th></tr>
+            </thead>
+            <tbody id="itemsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer sticky: total + confirmar -->
+  <div class="venta-footer" id="ventaFooter" style="display:none">
+    <div class="venta-footer-inner">
+      <a href="/ventas" class="btn btn-ghost">Cancelar</a>
+      <div class="venta-footer-total">
+        <span id="subtotalLine" style="display:none;font-size:.85rem;color:var(--text-muted)">
+          Subtotal: <span id="subtotalDisplay"></span> &nbsp;|&nbsp; Descuento: <span id="descuentoDisplay" style="color:var(--success)"></span> &nbsp;|&nbsp;
+        </span>
+        Total: <strong id="totalDisplay">$0</strong>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg" id="btnConfirmar">
+        Confirmar venta →
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+const CLIENTES = [
+  {% for c in clientes %}
+  { id: {{ c.id }}, nombre: "{{ c.nombre }}", tel: "{{ c.telefono or '' }}" },
+  {% endfor %}
+];
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/venta.js"></script>
+{% endblock %}
