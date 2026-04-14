@@ -24,7 +24,7 @@ def form_nuevo_servicio(request: Request, db: Session = Depends(get_db)):
     productos = db.query(models.ProductoStock).filter_by(activo=True).all()
     return templates.TemplateResponse("servicios/form.html", {
         "request": request, "servicio": None, "titulo": "Nuevo servicio",
-        "productos": productos, "consumos": []
+        "productos": productos, "consumos": {}
     })
 
 

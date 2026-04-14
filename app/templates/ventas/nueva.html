@@ -83,14 +83,14 @@
         <div class="catalogo-grid">
           {% for s in servicios %}
           <button type="button" class="catalogo-btn"
-                  onclick="agregarItem('{{ s.nombre }}', {{ s.precio }}, {{ s.id }})">
+                  onclick="agregarItem({{ s.nombre | tojson }}, {{ s.precio }}, {{ s.id }})">
             <span class="catalogo-nombre">{{ s.nombre }}</span>
             <span class="catalogo-precio">{{ s.precio | pesos }}</span>
           </button>
           {% endfor %}
           {% for c in combos %}
           <button type="button" class="catalogo-btn catalogo-btn-combo"
-                  onclick="agregarItem('{{ c.nombre }}', {{ c.precio }}, '')">
+                  onclick="agregarItem({{ c.nombre | tojson }}, {{ c.precio }}, '')">
             <span class="catalogo-nombre">📦 {{ c.nombre }}</span>
             <span class="catalogo-precio">{{ c.precio | pesos }}</span>
           </button>
@@ -133,7 +133,7 @@
 <script>
 const CLIENTES = [
   {% for c in clientes %}
-  { id: {{ c.id }}, nombre: "{{ c.nombre }}", tel: "{{ c.telefono or '' }}" },
+  { id: {{ c.id }}, nombre: {{ c.nombre | tojson }}, tel: {{ (c.telefono or '') | tojson }} },
   {% endfor %}
 ];
 </script>

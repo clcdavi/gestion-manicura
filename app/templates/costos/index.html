@@ -41,11 +41,11 @@
             <td class="vista-{{ c.id }} td-price">{{ c.monto | pesos }}</td>
             <td class="vista-{{ c.id }} td-actions">
               <button type="button" class="btn btn-sm btn-ghost"
-                      onclick="editarFila({{ c.id }}, '{{ c.nombre }}', {{ c.monto }}, '{{ c.categoria }}')">
+                      onclick="editarFila({{ c.id }}, {{ c.nombre | tojson }}, {{ c.monto }}, {{ c.categoria | tojson }})">
                 Editar
               </button>
               <form method="post" action="/costos/{{ c.id }}/eliminar" style="display:inline"
-                    onsubmit="return confirm('¿Eliminar {{ c.nombre }}?')">
+                    onsubmit="return confirm('¿Eliminar ' + {{ c.nombre | tojson }} + '?')">
                 <button type="submit" class="btn btn-sm btn-danger-ghost">✕</button>
               </form>
             </td>
