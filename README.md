@@ -27,13 +27,14 @@ uvicorn app.main:app --reload
 
 | Módulo | URL | Descripción |
 |--------|-----|-------------|
-| Dashboard | `/` | Métricas, gráficos por rango de fechas, rentabilidad por servicio |
+| Dashboard | `/` | KPIs, gráficos por rango, rentabilidad y punto de equilibrio |
 | Nueva Venta | `/ventas/nueva` | Registro rápido con descuentos y asignación de cliente |
 | Ventas del día | `/ventas` | Listado con filtro por fecha, asignar cliente post-venta |
 | Caja diaria | `/ventas/caja` | Resumen imprimible del día |
 | Clientes | `/clientes` | CRUD completo + historial de servicios por cliente |
-| Servicios | `/servicios` | Catálogo de servicios, combos, y consumo de insumos |
+| Servicios | `/servicios` | Catálogo de servicios, combos y consumo de insumos |
 | Stock | `/stock` | Inventario con categorías, alertas de mínimo y proyección |
+| Configuración | `/costos` | Costos fijos del negocio y parámetros de trabajo |
 
 ## Funcionalidades principales
 
@@ -51,10 +52,23 @@ uvicorn app.main:app --reload
 - Cliente más frecuente del mes
 - Distribución de formas de pago
 - Proyección de días restantes de stock crítico
-- **Análisis de rentabilidad**: margen de ganancia por servicio, alertas de pérdida y recomendaciones de precio
+- **Análisis de rentabilidad real**: costo de insumos + costo de tiempo por servicio, margen, estado (saludable / advertencia / crítico) y recomendaciones de precio
+- **Punto de equilibrio**: servicios mínimos mensuales para cubrir costos fijos
+
+**Rentabilidad**
+- Costo de insumos calculado con rendimiento real (ej: 1 frasco = 40 aplicaciones)
+- Costo de tiempo basado en costos fijos / horas productivas × duración del servicio
+- Estados: saludable (≥30%), advertencia (15–29%), crítico (<15%), sin datos
+- API JSON disponible en `/api/rentabilidad/resumen` y `/api/rentabilidad/punto-equilibrio`
+
+**Configuración del negocio** (`/costos`)
+- Alta, edición y baja de costos fijos mensuales (alquiler, servicios, personal, otros)
+- Parámetros: días trabajados por mes, horas por día y % de ocupación estimada
+- Cálculo automático de costo fijo por hora productiva
 
 **Stock**
 - Categorías dinámicas (crear, editar, eliminar desde la UI)
+- Rendimiento por producto: cuántos usos rinde cada unidad
 - Historial de movimientos por producto
 - Alertas visuales de stock bajo mínimo
 - Ajustes manuales con registro de motivo
@@ -71,8 +85,14 @@ app/
 ├── main.py          # FastAPI app, filtros Jinja2, migraciones inline
 ├── database.py      # Conexión SQLite / SQLAlchemy
 ├── models.py        # Modelos ORM
-├── schemas.py       # Schemas Pydantic
-├── routers/         # Lógica por módulo (ventas, clientes, servicios, stock, dashboard)
+├── utils.py         # Lógica de rentabilidad y punto de equilibrio
+├── routers/
+│   ├── dashboard.py
+│   ├── ventas.py
+│   ├── clientes.py
+│   ├── servicios.py
+│   ├── stock.py
+│   └── costos.py    # Configuración del negocio + API rentabilidad
 ├── templates/       # HTML con Jinja2
 └── static/          # CSS y JS
 
@@ -80,12 +100,23 @@ seed.py              # Poblar DB con datos de ejemplo
 salon.db             # Base de datos local (hacer backup copiando el archivo)
 ```
 
+## API JSON
+
+| Endpoint | Descripción |
+|----------|-------------|
+| `GET /api/rentabilidad/resumen` | Lista de servicios con margen, estado y costos |
+| `GET /api/rentabilidad/punto-equilibrio` | Servicios mínimos para cubrir costos fijos |
+| `GET /api/rentabilidad/servicio/{id}` | Rentabilidad de un servicio específico |
+| `GET /api/costos-fijos` | Lista de costos fijos activos |
+| `GET /api/configuracion-negocio` | Parámetros de trabajo actuales |
+
 ## Notas
 
-- **Nombre del salón**: buscar "Bella Studio" en los templates y reemplazar
+- **Nombre del salón**: buscar "Bella Studio" en los templates para personalizar
 - **Horario**: la app usa UTC internamente y muestra hora Argentina (UTC-3) en la interfaz
 - **Backups**: copiar `salon.db` es suficiente para hacer un backup completo
-- **Rentabilidad**: para que el análisis de márgenes funcione, configurar los insumos que consume cada servicio en Servicios → Editar
+- **Rentabilidad**: configurar los insumos de cada servicio (Servicios → Editar) y los costos fijos del negocio (Configuración) para que el análisis de márgenes sea preciso
+- **Rendimiento de insumos**: en Stock → Editar producto, indicar cuántos usos rinde cada unidad para calcular el costo real por servicio
 
 ## Migrar a PostgreSQL (futuro)
 
