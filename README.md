@@ -65,6 +65,7 @@ uvicorn app.main:app --reload
 - Alta, edición y baja de costos fijos mensuales (alquiler, servicios, personal, otros)
 - Parámetros: días trabajados por mes, horas por día y % de ocupación estimada
 - Cálculo automático de costo fijo por hora productiva
+- **PIN de administrador**: protege todas las acciones críticas (ver abajo)
 
 **Stock**
 - Categorías dinámicas (crear, editar, eliminar desde la UI)
@@ -77,6 +78,13 @@ uvicorn app.main:app --reload
 - Búsqueda por nombre
 - Historial completo de servicios y total gastado
 - Cumpleaños y notas personalizadas
+
+**Seguridad — PIN de administrador**
+- PIN de 4+ dígitos definido en Configuración, guardado hasheado (SHA-256)
+- Modal de PIN aparece al intentar cualquier acción crítica: editar precios, modificar stock, eliminar clientes/servicios/productos
+- Sesión activa por 30 minutos; indicador visible en el sidebar
+- Sin PIN configurado, todas las acciones funcionan sin fricción (modo inicial)
+- Operaciones del día a día (registrar ventas, ver listados) no requieren PIN
 
 ## Estructura del proyecto
 
@@ -109,6 +117,9 @@ salon.db             # Base de datos local (hacer backup copiando el archivo)
 | `GET /api/rentabilidad/servicio/{id}` | Rentabilidad de un servicio específico |
 | `GET /api/costos-fijos` | Lista de costos fijos activos |
 | `GET /api/configuracion-negocio` | Parámetros de trabajo actuales |
+| `GET /api/admin/status` | Si hay PIN configurado (`{"has_pin": bool}`) |
+| `POST /api/admin/login` | Verificar PIN y obtener token de sesión (30 min) |
+| `POST /api/admin/logout` | Invalidar token activo |
 
 ## Notas
 
@@ -117,6 +128,7 @@ salon.db             # Base de datos local (hacer backup copiando el archivo)
 - **Backups**: copiar `salon.db` es suficiente para hacer un backup completo
 - **Rentabilidad**: configurar los insumos de cada servicio (Servicios → Editar) y los costos fijos del negocio (Configuración) para que el análisis de márgenes sea preciso
 - **Rendimiento de insumos**: en Stock → Editar producto, indicar cuántos usos rinde cada unidad para calcular el costo real por servicio
+- **PIN de admin**: configurarlo en Configuración → "PIN de administrador". Sin PIN, la app funciona igual que antes
 
 ## Migrar a PostgreSQL (futuro)
 
