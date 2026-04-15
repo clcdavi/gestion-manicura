@@ -10,6 +10,24 @@ from app.routers import clientes, servicios, ventas, stock, dashboard, costos
 # Crear tablas si no existen
 models.Base.metadata.create_all(bind=engine)
 
+# Migraciones inline para columnas nuevas en tablas existentes
+with engine.connect() as _conn:
+    for _tabla, _col, _tipo, _default in [
+        ("ventas",           "descuento",          "REAL",  "0"),
+        ("ventas",           "descuento_tipo",      "TEXT",  "'pesos'"),
+        ("ventas",           "descuento_motivo",    "TEXT",  "''"),
+        ("productos_stock",       "rendimiento_usos",    "REAL",     "1.0"),
+        ("productos_stock",       "unidad_rendimiento",  "TEXT",     "'aplicaciones'"),
+        ("configuracion_negocio", "admin_pin_hash",      "TEXT",     "NULL"),
+        ("configuracion_negocio", "admin_token",         "TEXT",     "NULL"),
+        ("configuracion_negocio", "admin_token_expiry",  "DATETIME", "NULL"),
+    ]:
+        try:
+            _conn.execute(text(f"ALTER TABLE {_tabla} ADD COLUMN {_col} {_tipo} DEFAULT {_default}"))
+            _conn.commit()
+        except Exception:
+            pass
+
 # Sembrar datos por defecto si las tablas están vacías
 from app.database import SessionLocal as _Session
 from app import models as _models
@@ -22,21 +40,6 @@ if not _db.query(_models.ConfiguracionNegocio).first():
     _db.add(_models.ConfiguracionNegocio(id=1))
     _db.commit()
 _db.close()
-
-# Migraciones inline para columnas nuevas en tablas existentes
-with engine.connect() as _conn:
-    for _tabla, _col, _tipo, _default in [
-        ("ventas",           "descuento",          "REAL",  "0"),
-        ("ventas",           "descuento_tipo",      "TEXT",  "'pesos'"),
-        ("ventas",           "descuento_motivo",    "TEXT",  "''"),
-        ("productos_stock",  "rendimiento_usos",    "REAL",  "1.0"),
-        ("productos_stock",  "unidad_rendimiento",  "TEXT",  "'aplicaciones'"),
-    ]:
-        try:
-            _conn.execute(text(f"ALTER TABLE {_tabla} ADD COLUMN {_col} {_tipo} DEFAULT {_default}"))
-            _conn.commit()
-        except Exception:
-            pass
 
 app = FastAPI(title="Gestión Salón de Manicuría", docs_url=None, redoc_url=None)
 

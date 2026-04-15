@@ -7,6 +7,7 @@ from typing import Optional
 from datetime import date
 from app.database import get_db
 from app import models
+from app.utils import verify_admin_token
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 templates = Jinja2Templates(directory="app/templates")
@@ -103,7 +104,13 @@ def actualizar_cliente(
 
 
 @router.post("/{cliente_id}/eliminar")
-def eliminar_cliente(cliente_id: int, db: Session = Depends(get_db)):
+def eliminar_cliente(
+    cliente_id: int,
+    admin_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url=f"/clientes/{cliente_id}/editar", status_code=303)
     cliente = db.query(models.Cliente).filter_by(id=cliente_id).first()
     if cliente:
         cliente.activo = False

@@ -52,6 +52,10 @@
         <span class="nav-label">Configuración</span>
       </a>
     </nav>
+    <div id="adminIndicator" style="display:none;padding:.4rem 1rem .5rem;border-top:1px solid var(--border);font-size:.78rem">
+      <span style="color:var(--success,#10B981)">🔓 Admin activo</span>
+      <button onclick="adminLogout()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.78rem;padding:0;margin-left:.5rem;text-decoration:underline">Cerrar</button>
+    </div>
     <div class="sidebar-footer">
       <small>v1.0 · Prototipo</small>
     </div>
@@ -93,11 +97,120 @@
     </main>
   </div>
 
+  <!-- Admin PIN Modal -->
+  <div id="pinModal" class="modal-overlay" style="display:none" onclick="cerrarPinModal(event)">
+    <div class="modal-box" style="max-width:320px;text-align:center">
+      <h3 style="margin-top:0">Acceso de administrador</h3>
+      <p class="text-muted" style="font-size:.85rem;margin-bottom:.75rem">Ingresá el PIN para continuar.</p>
+      <input type="password" id="pinInput" inputmode="numeric" maxlength="10" placeholder="• • • •"
+             style="width:100%;font-size:1.6rem;text-align:center;letter-spacing:.4rem;padding:.5rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)"
+             onkeydown="if(event.key==='Enter') verificarPin()">
+      <div id="pinError" style="color:var(--danger,#EF4444);font-size:.85rem;min-height:1.4rem;margin-top:.4rem"></div>
+      <div style="display:flex;gap:.75rem;justify-content:center;margin-top:.75rem">
+        <button type="button" class="btn btn-ghost" onclick="cerrarPinModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="verificarPin()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/static/js/app.js"></script>
   <script>
     document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('es-AR', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
+
+    // ── Admin PIN system ──────────────────────────────────────────────────────
+    var _adminReady = false, _hasPinSet = false, _pendingAdminCbs = [], _adminCallback = null;
+    var ATOK = 'admin_tok', AEXP = 'admin_exp';
+
+    fetch('/api/admin/status').then(function(r){ return r.json(); }).then(function(d){
+      _hasPinSet = d.has_pin;
+      _adminReady = true;
+      _pendingAdminCbs.forEach(function(cb){ _execAdmin(cb); });
+      _pendingAdminCbs = [];
+      if (isAdminActive()) {
+        var ind = document.getElementById('adminIndicator');
+        if (ind) ind.style.display = '';
+      }
+    });
+
+    function isAdminActive() {
+      var tok = sessionStorage.getItem(ATOK), exp = sessionStorage.getItem(AEXP);
+      return !!(tok && exp && Date.now() < parseInt(exp));
+    }
+
+    function requireAdmin(callback) {
+      if (!_adminReady) { _pendingAdminCbs.push(callback); return; }
+      _execAdmin(callback);
+    }
+
+    function _execAdmin(callback) {
+      if (!_hasPinSet) { callback(''); return; }
+      if (isAdminActive()) { callback(sessionStorage.getItem(ATOK)); return; }
+      document.getElementById('pinModal').style.display = 'flex';
+      document.getElementById('pinInput').value = '';
+      document.getElementById('pinError').textContent = '';
+      _adminCallback = callback;
+      setTimeout(function(){ document.getElementById('pinInput').focus(); }, 50);
+    }
+
+    function requireAdminForm(form, event) {
+      if (event) event.preventDefault();
+      requireAdmin(function(token) { _addTokAndSubmit(form, token); });
+    }
+
+    function confirmAndDelete(formId, msg) {
+      if (!confirm(msg)) return;
+      requireAdmin(function(token) {
+        _addTokAndSubmit(document.getElementById(formId), token);
+      });
+    }
+
+    function _addTokAndSubmit(form, token) {
+      form.querySelectorAll('[name="_admin_token"]').forEach(function(el){ el.remove(); });
+      var inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = '_admin_token'; inp.value = token || '';
+      form.appendChild(inp);
+      form.submit();
+    }
+
+    function verificarPin() {
+      var pin = document.getElementById('pinInput').value;
+      if (!pin) return;
+      fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({pin: pin})
+      }).then(function(r) {
+        if (!r.ok) throw r.status;
+        return r.json();
+      }).then(function(d) {
+        sessionStorage.setItem(ATOK, d.token);
+        sessionStorage.setItem(AEXP, String(Date.now() + d.expires_in * 1000));
+        document.getElementById('pinModal').style.display = 'none';
+        var ind = document.getElementById('adminIndicator');
+        if (ind) ind.style.display = '';
+        if (_adminCallback) { _adminCallback(d.token); _adminCallback = null; }
+      }).catch(function() {
+        document.getElementById('pinError').textContent = 'PIN incorrecto';
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+      });
+    }
+
+    function cerrarPinModal(e) {
+      if (!e || e.target === document.getElementById('pinModal')) {
+        document.getElementById('pinModal').style.display = 'none';
+        _adminCallback = null;
+      }
+    }
+
+    function adminLogout() {
+      sessionStorage.removeItem(ATOK);
+      sessionStorage.removeItem(AEXP);
+      fetch('/api/admin/logout', {method: 'POST'});
+      document.getElementById('adminIndicator').style.display = 'none';
+    }
   </script>
   {% block extra_js %}{% endblock %}
 </body>

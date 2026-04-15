@@ -29,9 +29,9 @@
         <td class="td-notas">{{ s.descripcion | truncate(60) if s.descripcion else '—' }}</td>
         <td class="td-actions">
           <a href="/servicios/{{ s.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
-          <form method="post" action="/servicios/{{ s.id }}/eliminar" style="display:inline"
-                onsubmit="return confirm('¿Eliminar {{ s.nombre }}?')">
-            <button type="submit" class="btn btn-sm btn-danger-ghost">✕</button>
+          <form method="post" action="/servicios/{{ s.id }}/eliminar" style="display:inline" id="form-elim-srv-{{ s.id }}">
+            <button type="button" class="btn btn-sm btn-danger-ghost"
+                    onclick="confirmAndDelete('form-elim-srv-{{ s.id }}', '¿Eliminar ' + {{ s.nombre | tojson }} + '?')">✕</button>
           </form>
         </td>
       </tr>
@@ -62,9 +62,9 @@
         </td>
         <td class="td-actions">
           <a href="/servicios/combos/{{ c.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
-          <form method="post" action="/servicios/combos/{{ c.id }}/eliminar" style="display:inline"
-                onsubmit="return confirm('¿Eliminar combo {{ c.nombre }}?')">
-            <button type="submit" class="btn btn-sm btn-danger-ghost">✕</button>
+          <form method="post" action="/servicios/combos/{{ c.id }}/eliminar" style="display:inline" id="form-elim-combo-{{ c.id }}">
+            <button type="button" class="btn btn-sm btn-danger-ghost"
+                    onclick="confirmAndDelete('form-elim-combo-{{ c.id }}', '¿Eliminar combo ' + {{ c.nombre | tojson }} + '?')">✕</button>
           </form>
         </td>
       </tr>

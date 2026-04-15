@@ -40,7 +40,7 @@
       <a href="/clientes" class="btn btn-ghost">Cancelar</a>
       {% if cliente %}
       <button type="button" class="btn btn-danger"
-              onclick="if(confirm('¿Eliminar a ' + {{ cliente.nombre | tojson }} + '? Esta acción no se puede deshacer.')) document.getElementById('formEliminarCliente').submit()">
+              onclick="confirmAndDelete('formEliminarCliente', '¿Eliminar a ' + {{ cliente.nombre | tojson }} + '? Esta acción no se puede deshacer.')">
         Eliminar cliente
       </button>
       {% endif %}

@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 from app import models
 
 
@@ -65,6 +66,24 @@ def get_rentabilidad_servicio(servicio: models.Servicio, db: Session) -> dict:
         "tiene_duracion": tiene_duracion,
         "sin_datos": sin_datos,
     }
+
+
+def verify_admin_token(db: Session, token: str) -> bool:
+    """Devuelve True si la acción está autorizada.
+    Sin PIN configurado → siempre True.
+    Con PIN → verifica token activo en DB.
+    """
+    cfg = db.query(models.ConfiguracionNegocio).filter_by(id=1).first()
+    if not cfg or not cfg.admin_pin_hash:
+        return True  # Sin PIN configurado: acceso libre
+    if not token:
+        return False
+    if cfg.admin_token != token:
+        return False
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if cfg.admin_token_expiry and cfg.admin_token_expiry < now:
+        return False
+    return True
 
 
 def get_punto_equilibrio(db: Session) -> dict:

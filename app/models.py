@@ -161,3 +161,6 @@ class ConfiguracionNegocio(Base):
     dias_trabajo_mes = Column(Integer, default=22)
     horas_dia = Column(Float, default=7.0)
     pct_ocupacion = Column(Float, default=0.75)
+    admin_pin_hash = Column(String(64), nullable=True)
+    admin_token = Column(String(64), nullable=True)
+    admin_token_expiry = Column(DateTime, nullable=True)

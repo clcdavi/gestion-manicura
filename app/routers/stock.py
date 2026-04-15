@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models
+from app.utils import verify_admin_token
 
 router = APIRouter(prefix="/stock", tags=["stock"])
 templates = Jinja2Templates(directory="app/templates")
@@ -48,8 +49,11 @@ def crear_producto(
     unidad: str = Form("unidad"),
     rendimiento_usos: float = Form(1.0),
     unidad_rendimiento: str = Form("aplicaciones"),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db)
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/stock", status_code=303)
     p = models.ProductoStock(
         nombre=nombre, categoria=categoria,
         cantidad_actual=cantidad_actual, cantidad_minima=cantidad_minima,
@@ -141,8 +145,11 @@ def actualizar_producto(
     unidad: str = Form("unidad"),
     rendimiento_usos: float = Form(1.0),
     unidad_rendimiento: str = Form("aplicaciones"),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db)
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/stock", status_code=303)
     p = db.query(models.ProductoStock).filter_by(id=producto_id).first()
     if not p:
         raise HTTPException(status_code=404)
@@ -171,8 +178,11 @@ def ajustar_stock(
     producto_id: int,
     cantidad: float = Form(...),
     descripcion: str = Form("Ajuste manual"),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db)
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url=f"/stock/{producto_id}", status_code=303)
     p = db.query(models.ProductoStock).filter_by(id=producto_id).first()
     if not p:
         raise HTTPException(status_code=404)
@@ -188,7 +198,13 @@ def ajustar_stock(
 
 
 @router.post("/{producto_id}/eliminar")
-def eliminar_producto(producto_id: int, db: Session = Depends(get_db)):
+def eliminar_producto(
+    producto_id: int,
+    admin_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/stock", status_code=303)
     p = db.query(models.ProductoStock).filter_by(id=producto_id).first()
     if p:
         p.activo = False

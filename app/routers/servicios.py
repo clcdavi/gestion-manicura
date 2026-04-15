@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 from app.database import get_db
 from app import models
+from app.utils import verify_admin_token
 
 router = APIRouter(prefix="/servicios", tags=["servicios"])
 templates = Jinja2Templates(directory="app/templates")
@@ -35,8 +36,11 @@ async def crear_servicio(
     precio: float = Form(...),
     duracion_min: int = Form(60),
     descripcion: str = Form(""),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db)
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/servicios", status_code=303)
     s = models.Servicio(nombre=nombre, precio=precio, duracion_min=duracion_min, descripcion=descripcion)
     db.add(s)
     db.flush()
@@ -77,8 +81,11 @@ async def actualizar_servicio(
     precio: float = Form(...),
     duracion_min: int = Form(60),
     descripcion: str = Form(""),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db)
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/servicios", status_code=303)
     s = db.query(models.Servicio).filter_by(id=servicio_id).first()
     if not s:
         raise HTTPException(status_code=404)
@@ -105,7 +112,13 @@ async def actualizar_servicio(
 
 
 @router.post("/{servicio_id}/eliminar")
-def eliminar_servicio(servicio_id: int, db: Session = Depends(get_db)):
+def eliminar_servicio(
+    servicio_id: int,
+    admin_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/servicios", status_code=303)
     s = db.query(models.Servicio).filter_by(id=servicio_id).first()
     if s:
         s.activo = False
@@ -130,8 +143,11 @@ async def crear_combo(
     nombre: str = Form(...),
     precio: float = Form(...),
     descripcion: str = Form(""),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db)
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/servicios", status_code=303)
     combo = models.Combo(nombre=nombre, precio=precio, descripcion=descripcion)
     db.add(combo)
     db.flush()
@@ -165,8 +181,11 @@ async def actualizar_combo(
     nombre: str = Form(...),
     precio: float = Form(...),
     descripcion: str = Form(""),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db)
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/servicios", status_code=303)
     combo = db.query(models.Combo).filter_by(id=combo_id).first()
     if not combo:
         raise HTTPException(status_code=404)
@@ -184,7 +203,13 @@ async def actualizar_combo(
 
 
 @router.post("/combos/{combo_id}/eliminar")
-def eliminar_combo(combo_id: int, db: Session = Depends(get_db)):
+def eliminar_combo(
+    combo_id: int,
+    admin_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/servicios", status_code=303)
     c = db.query(models.Combo).filter_by(id=combo_id).first()
     if c:
         c.activo = False

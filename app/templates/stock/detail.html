@@ -52,7 +52,7 @@
             <input type="text" name="descripcion" placeholder="Ej: Compra nueva" value="Ajuste manual">
           </div>
           <div class="form-group" style="align-self:flex-end">
-            <button type="submit" class="btn btn-primary">Ajustar</button>
+            <button type="submit" class="btn btn-primary" onclick="requireAdminForm(this.form, event)">Ajustar</button>
           </div>
         </div>
       </form>
@@ -60,9 +60,9 @@
 
     <div class="form-actions" style="margin-top:1rem">
       <a href="/stock/{{ producto.id }}/editar" class="btn btn-outline">Editar producto</a>
-      <form method="post" action="/stock/{{ producto.id }}/eliminar"
-            onsubmit="return confirm('¿Eliminar este producto?')">
-        <button type="submit" class="btn btn-danger">Eliminar</button>
+      <form method="post" action="/stock/{{ producto.id }}/eliminar" id="formEliminarProd">
+        <button type="button" class="btn btn-danger"
+                onclick="confirmAndDelete('formEliminarProd', '¿Eliminar ' + {{ producto.nombre | tojson }} + '?')">Eliminar</button>
       </form>
     </div>
   </div>

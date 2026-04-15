@@ -70,11 +70,11 @@
       <a href="/stock" class="btn btn-ghost">Cancelar</a>
       {% if producto %}
       <button type="button" class="btn btn-danger"
-              onclick="if(confirm('¿Eliminar ' + {{ producto.nombre | tojson }} + '? Esta acción no se puede deshacer.')) document.getElementById('formEliminar').submit()">
+              onclick="confirmAndDelete('formEliminar', '¿Eliminar ' + {{ producto.nombre | tojson }} + '? Esta acción no se puede deshacer.')">
         Eliminar producto
       </button>
       {% endif %}
-      <button type="submit" class="btn btn-primary">
+      <button type="submit" class="btn btn-primary" onclick="requireAdminForm(this.form, event)">
         {{ 'Guardar cambios' if producto else 'Agregar producto' }}
       </button>
     </div>

@@ -1,3 +1,6 @@
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -5,7 +8,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models
 from app.utils import (
-    get_costo_fijo_por_hora, get_rentabilidad_servicio, get_punto_equilibrio
+    get_costo_fijo_por_hora, get_rentabilidad_servicio, get_punto_equilibrio,
+    verify_admin_token,
 )
 
 router = APIRouter(tags=["costos"])
@@ -22,6 +26,7 @@ def pagina_costos(request: Request, db: Session = Depends(get_db)):
     config = db.query(models.ConfiguracionNegocio).filter_by(id=1).first()
     total_mensual = sum(c.monto for c in costos)
     costo_hora = get_costo_fijo_por_hora(db)
+    has_pin = bool(config and config.admin_pin_hash)
     return templates.TemplateResponse("costos/index.html", {
         "request": request,
         "costos": costos,
@@ -29,7 +34,33 @@ def pagina_costos(request: Request, db: Session = Depends(get_db)):
         "total_mensual": total_mensual,
         "costo_hora": costo_hora,
         "categorias": CATEGORIAS_COSTO,
+        "has_pin": has_pin,
     })
+
+
+@router.post("/costos/set-pin")
+def guardar_pin(
+    pin_nuevo: str = Form(...),
+    pin_confirmar: str = Form(...),
+    admin_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    cfg = db.query(models.ConfiguracionNegocio).filter_by(id=1).first()
+    if cfg and cfg.admin_pin_hash:
+        # Ya tiene PIN → requiere token de admin para cambiarlo
+        if not verify_admin_token(db, admin_token):
+            return RedirectResponse(url="/costos", status_code=303)
+    if pin_nuevo != pin_confirmar or len(pin_nuevo) < 4:
+        return RedirectResponse(url="/costos", status_code=303)
+    if not cfg:
+        cfg = models.ConfiguracionNegocio(id=1)
+        db.add(cfg)
+    cfg.admin_pin_hash = hashlib.sha256(pin_nuevo.encode()).hexdigest()
+    # Invalidar sesión activa al cambiar PIN
+    cfg.admin_token = None
+    cfg.admin_token_expiry = None
+    db.commit()
+    return RedirectResponse(url="/costos", status_code=303)
 
 
 @router.post("/costos/nuevo")
@@ -37,8 +68,11 @@ def crear_costo(
     nombre: str = Form(...),
     monto: float = Form(...),
     categoria: str = Form("general"),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/costos", status_code=303)
     db.add(models.CostoFijo(nombre=nombre.strip(), monto=monto, categoria=categoria))
     db.commit()
     return RedirectResponse(url="/costos", status_code=303)
@@ -50,8 +84,11 @@ def editar_costo(
     nombre: str = Form(...),
     monto: float = Form(...),
     categoria: str = Form("general"),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/costos", status_code=303)
     c = db.query(models.CostoFijo).filter_by(id=costo_id).first()
     if not c:
         raise HTTPException(status_code=404)
@@ -63,7 +100,13 @@ def editar_costo(
 
 
 @router.post("/costos/{costo_id}/eliminar")
-def eliminar_costo(costo_id: int, db: Session = Depends(get_db)):
+def eliminar_costo(
+    costo_id: int,
+    admin_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/costos", status_code=303)
     c = db.query(models.CostoFijo).filter_by(id=costo_id).first()
     if c:
         c.activo = False
@@ -76,8 +119,11 @@ def guardar_configuracion(
     dias_trabajo_mes: int = Form(22),
     horas_dia: float = Form(7.0),
     pct_ocupacion: float = Form(75),
+    admin_token: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    if not verify_admin_token(db, admin_token):
+        return RedirectResponse(url="/costos", status_code=303)
     cfg = db.query(models.ConfiguracionNegocio).filter_by(id=1).first()
     if not cfg:
         cfg = models.ConfiguracionNegocio(id=1)
@@ -87,6 +133,40 @@ def guardar_configuracion(
     cfg.pct_ocupacion = max(0.01, min(pct_ocupacion / 100, 1.0))
     db.commit()
     return RedirectResponse(url="/costos", status_code=303)
+
+
+# ── API Admin ─────────────────────────────────────────────────────────────────
+
+@router.get("/api/admin/status")
+def admin_status(db: Session = Depends(get_db)):
+    cfg = db.query(models.ConfiguracionNegocio).filter_by(id=1).first()
+    return {"has_pin": bool(cfg and cfg.admin_pin_hash)}
+
+
+@router.post("/api/admin/login")
+async def admin_login(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    pin = str(data.get("pin", ""))
+    cfg = db.query(models.ConfiguracionNegocio).filter_by(id=1).first()
+    if not cfg or not cfg.admin_pin_hash:
+        return JSONResponse({"error": "no_pin"}, status_code=400)
+    if hashlib.sha256(pin.encode()).hexdigest() != cfg.admin_pin_hash:
+        return JSONResponse({"error": "invalid"}, status_code=401)
+    token = secrets.token_hex(32)
+    cfg.admin_token = token
+    cfg.admin_token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30)
+    db.commit()
+    return {"token": token, "expires_in": 1800}
+
+
+@router.post("/api/admin/logout")
+def admin_logout(db: Session = Depends(get_db)):
+    cfg = db.query(models.ConfiguracionNegocio).filter_by(id=1).first()
+    if cfg:
+        cfg.admin_token = None
+        cfg.admin_token_expiry = None
+        db.commit()
+    return {"ok": True}
 
 
 # ── API JSON ──────────────────────────────────────────────────────────────────
