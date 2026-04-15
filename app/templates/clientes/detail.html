@@ -46,9 +46,9 @@
 
     <div class="form-actions" style="margin-top:1rem">
       <a href="/clientes/{{ cliente.id }}/editar" class="btn btn-outline">Editar</a>
-      <form method="post" action="/clientes/{{ cliente.id }}/eliminar"
-            onsubmit="return confirm('¿Eliminar esta cliente?')">
-        <button type="submit" class="btn btn-danger">Eliminar</button>
+      <form method="post" action="/clientes/{{ cliente.id }}/eliminar" id="formEliminarClienteDetalle">
+        <button type="button" class="btn btn-danger"
+                onclick="confirmAndDelete('formEliminarClienteDetalle', '¿Eliminar a ' + {{ cliente.nombre | tojson }} + '?')">Eliminar</button>
       </form>
     </div>
   </div>
