@@ -167,9 +167,9 @@
     }
 
     function _addTokAndSubmit(form, token) {
-      form.querySelectorAll('[name="_admin_token"]').forEach(function(el){ el.remove(); });
+      form.querySelectorAll('[name="admin_token"]').forEach(function(el){ el.remove(); });
       var inp = document.createElement('input');
-      inp.type = 'hidden'; inp.name = '_admin_token'; inp.value = token || '';
+      inp.type = 'hidden'; inp.name = 'admin_token'; inp.value = token || '';
       form.appendChild(inp);
       form.submit();
     }
@@ -182,9 +182,17 @@
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({pin: pin})
       }).then(function(r) {
-        if (!r.ok) throw r.status;
-        return r.json();
-      }).then(function(d) {
+        return r.json().then(function(d) { return {ok: r.ok, data: d}; });
+      }).then(function(res) {
+        if (res.data.error === 'no_pin') {
+          // PIN fue reseteado — cerrar modal y proceder sin token
+          _hasPinSet = false;
+          document.getElementById('pinModal').style.display = 'none';
+          if (_adminCallback) { _adminCallback(''); _adminCallback = null; }
+          return;
+        }
+        if (!res.ok) throw new Error('invalid');
+        var d = res.data;
         sessionStorage.setItem(ATOK, d.token);
         sessionStorage.setItem(AEXP, String(Date.now() + d.expires_in * 1000));
         document.getElementById('pinModal').style.display = 'none';
