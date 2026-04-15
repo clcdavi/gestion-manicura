@@ -62,7 +62,8 @@
       <a href="/stock/{{ producto.id }}/editar" class="btn btn-outline">Editar producto</a>
       <form method="post" action="/stock/{{ producto.id }}/eliminar" id="formEliminarProd">
         <button type="button" class="btn btn-danger"
-                onclick="confirmAndDelete('formEliminarProd', '¿Eliminar ' + {{ producto.nombre | tojson }} + '?')">Eliminar</button>
+                data-form="formEliminarProd" data-msg="¿Eliminar {{ producto.nombre }}?"
+                onclick="confirmAndDelete(this.dataset.form, this.dataset.msg)">Eliminar</button>
       </form>
     </div>
   </div>

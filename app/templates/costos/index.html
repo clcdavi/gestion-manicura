@@ -41,12 +41,14 @@
             <td class="vista-{{ c.id }} td-price">{{ c.monto | pesos }}</td>
             <td class="vista-{{ c.id }} td-actions">
               <button type="button" class="btn btn-sm btn-ghost"
-                      onclick="editarFila({{ c.id }}, {{ c.nombre | tojson }}, {{ c.monto }}, {{ c.categoria | tojson }})">
+                      data-id="{{ c.id }}" data-nombre="{{ c.nombre }}" data-monto="{{ c.monto }}" data-cat="{{ c.categoria }}"
+                      onclick="editarFila(this.dataset.id, this.dataset.nombre, this.dataset.monto, this.dataset.cat)">
                 Editar
               </button>
               <form method="post" action="/costos/{{ c.id }}/eliminar" style="display:inline" id="form-elim-costo-{{ c.id }}">
                 <button type="button" class="btn btn-sm btn-danger-ghost"
-                        onclick="confirmAndDelete('form-elim-costo-{{ c.id }}', '¿Eliminar ' + {{ c.nombre | tojson }} + '?')">✕</button>
+                        data-form="form-elim-costo-{{ c.id }}" data-msg="¿Eliminar {{ c.nombre }}?"
+                        onclick="confirmAndDelete(this.dataset.form, this.dataset.msg)">✕</button>
               </form>
             </td>
 

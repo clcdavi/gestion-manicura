@@ -40,7 +40,8 @@
       <a href="/clientes" class="btn btn-ghost">Cancelar</a>
       {% if cliente %}
       <button type="button" class="btn btn-danger"
-              onclick="confirmAndDelete('formEliminarCliente', '¿Eliminar a ' + {{ cliente.nombre | tojson }} + '? Esta acción no se puede deshacer.')">
+              data-form="formEliminarCliente" data-msg="¿Eliminar a {{ cliente.nombre }}? Esta acción no se puede deshacer."
+              onclick="confirmAndDelete(this.dataset.form, this.dataset.msg)">
         Eliminar cliente
       </button>
       {% endif %}

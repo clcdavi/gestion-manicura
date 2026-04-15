@@ -31,7 +31,8 @@
           <a href="/servicios/{{ s.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
           <form method="post" action="/servicios/{{ s.id }}/eliminar" style="display:inline" id="form-elim-srv-{{ s.id }}">
             <button type="button" class="btn btn-sm btn-danger-ghost"
-                    onclick="confirmAndDelete('form-elim-srv-{{ s.id }}', '¿Eliminar ' + {{ s.nombre | tojson }} + '?')">✕</button>
+                    data-form="form-elim-srv-{{ s.id }}" data-msg="¿Eliminar {{ s.nombre }}?"
+                    onclick="confirmAndDelete(this.dataset.form, this.dataset.msg)">✕</button>
           </form>
         </td>
       </tr>
@@ -64,7 +65,8 @@
           <a href="/servicios/combos/{{ c.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
           <form method="post" action="/servicios/combos/{{ c.id }}/eliminar" style="display:inline" id="form-elim-combo-{{ c.id }}">
             <button type="button" class="btn btn-sm btn-danger-ghost"
-                    onclick="confirmAndDelete('form-elim-combo-{{ c.id }}', '¿Eliminar combo ' + {{ c.nombre | tojson }} + '?')">✕</button>
+                    data-form="form-elim-combo-{{ c.id }}" data-msg="¿Eliminar combo {{ c.nombre }}?"
+                    onclick="confirmAndDelete(this.dataset.form, this.dataset.msg)">✕</button>
           </form>
         </td>
       </tr>

@@ -70,7 +70,8 @@
       <a href="/stock" class="btn btn-ghost">Cancelar</a>
       {% if producto %}
       <button type="button" class="btn btn-danger"
-              onclick="confirmAndDelete('formEliminar', '¿Eliminar ' + {{ producto.nombre | tojson }} + '? Esta acción no se puede deshacer.')">
+              data-form="formEliminar" data-msg="¿Eliminar {{ producto.nombre }}? Esta acción no se puede deshacer."
+              onclick="confirmAndDelete(this.dataset.form, this.dataset.msg)">
         Eliminar producto
       </button>
       {% endif %}

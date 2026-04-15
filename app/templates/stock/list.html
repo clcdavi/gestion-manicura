@@ -42,7 +42,8 @@
         <td style="width:60px;text-align:right">
           <form method="post" action="/stock/categorias/{{ cat.id }}/eliminar" id="form-elim-cat-{{ cat.id }}">
             <button type="button" class="btn btn-sm btn-danger-ghost"
-                    onclick="if(confirm('¿Eliminar categoría ' + {{ cat.nombre | tojson }} + '? Los productos quedarán en General.')) document.getElementById('form-elim-cat-{{ cat.id }}').submit()">✕</button>
+                    data-form="form-elim-cat-{{ cat.id }}" data-msg="¿Eliminar categoría {{ cat.nombre }}? Los productos quedarán en General."
+                    onclick="if(confirm(this.dataset.msg)) document.getElementById(this.dataset.form).submit()">✕</button>
           </form>
         </td>
       </tr>

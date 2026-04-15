@@ -48,7 +48,8 @@
       <a href="/clientes/{{ cliente.id }}/editar" class="btn btn-outline">Editar</a>
       <form method="post" action="/clientes/{{ cliente.id }}/eliminar" id="formEliminarClienteDetalle">
         <button type="button" class="btn btn-danger"
-                onclick="confirmAndDelete('formEliminarClienteDetalle', '¿Eliminar a ' + {{ cliente.nombre | tojson }} + '?')">Eliminar</button>
+                data-form="formEliminarClienteDetalle" data-msg="¿Eliminar a {{ cliente.nombre }}?"
+                onclick="confirmAndDelete(this.dataset.form, this.dataset.msg)">Eliminar</button>
       </form>
     </div>
   </div>

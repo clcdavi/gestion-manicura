@@ -83,14 +83,16 @@
         <div class="catalogo-grid">
           {% for s in servicios %}
           <button type="button" class="catalogo-btn"
-                  onclick="agregarItem({{ s.nombre | tojson }}, {{ s.precio }}, {{ s.id }})">
+                  data-nombre="{{ s.nombre }}" data-precio="{{ s.precio }}" data-id="{{ s.id }}"
+                  onclick="agregarItem(this.dataset.nombre, this.dataset.precio, this.dataset.id)">
             <span class="catalogo-nombre">{{ s.nombre }}</span>
             <span class="catalogo-precio">{{ s.precio | pesos }}</span>
           </button>
           {% endfor %}
           {% for c in combos %}
           <button type="button" class="catalogo-btn catalogo-btn-combo"
-                  onclick="agregarItem({{ c.nombre | tojson }}, {{ c.precio }}, '')">
+                  data-nombre="{{ c.nombre }}" data-precio="{{ c.precio }}"
+                  onclick="agregarItem(this.dataset.nombre, this.dataset.precio, '')">
             <span class="catalogo-nombre">📦 {{ c.nombre }}</span>
             <span class="catalogo-precio">{{ c.precio | pesos }}</span>
           </button>
