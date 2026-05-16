@@ -1,29 +1,57 @@
 {% extends "base.html" %}
 {% block title %}Clientes{% endblock %}
-{% block header_title %}Clientes{% endblock %}
-{% block breadcrumb %}
-<nav class="breadcrumb"><span class="bc-current">Clientes</span></nav>
-{% endblock %}
+{% block header_title %}👤 Clientes{% endblock %}
+{% block breadcrumb %}<nav class="breadcrumb"><span class="bc-current">Clientes</span></nav>{% endblock %}
 
 {% block content %}
-<div class="page-actions">
-  <form class="search-form" method="get" action="/clientes">
-    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre..." class="search-input" autocomplete="off">
-    <button type="submit" class="btn btn-outline">Buscar</button>
-    {% if q %}<a href="/clientes" class="btn btn-ghost">Limpiar</a>{% endif %}
-  </form>
-  <a href="/clientes/nuevo" class="btn btn-primary">+ Nueva cliente</a>
+{% if flash_msg %}<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>{% endif %}
+
+<div class="page-actions" style="margin-bottom:1rem;">
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;flex:1;">
+    <!-- Pestañas de vista -->
+    <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <a href="/clientes?vista=activos" class="btn {% if vista == 'activos' %}btn-primary{% else %}btn-ghost{% endif %}" style="border-radius:0;border:none;padding:.35rem .75rem;font-size:.83rem;">👤 Activos</a>
+      <a href="/clientes?vista=inactivos" class="btn {% if vista == 'inactivos' %}btn-primary{% else %}btn-ghost{% endif %}" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:.35rem .75rem;font-size:.83rem;">💤 Inactivos</a>
+      <a href="/clientes?vista=cumpleanos" class="btn {% if vista == 'cumpleanos' %}btn-primary{% else %}btn-ghost{% endif %}" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:.35rem .75rem;font-size:.83rem;">
+        🎂 Cumpleaños
+        {% if cumple_hoy_count > 0 %}
+        <span style="background:#ef4444;color:white;border-radius:50%;padding:0 .4rem;font-size:.7rem;margin-left:.3rem;">{{ cumple_hoy_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+
+    {% if vista == 'activos' %}
+    <form method="get" action="/clientes" style="display:flex;gap:.35rem;flex:1;max-width:300px;">
+      <input type="hidden" name="vista" value="activos">
+      <input type="text" name="q" value="{{ q }}" placeholder="Buscar..." class="form-control" style="flex:1;padding:.35rem .6rem;">
+      <button type="submit" class="btn btn-outline" style="padding:.35rem .7rem;">🔍</button>
+    </form>
+    {% endif %}
+  </div>
+  <a href="/clientes/nuevo" class="btn btn-primary">+ Nuevo cliente</a>
 </div>
 
+{% if vista == 'inactivos' %}
+<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem;font-size:.85rem;color:#92400e;">
+  💤 Clientes que no vinieron en los <strong>últimos 60 días</strong>. Considerá enviarles un mensaje.
+</div>
+{% elif vista == 'cumpleanos' and cumple_hoy_count > 0 %}
+<div style="background:#d1fae5;border:1px solid #10b981;border-radius:8px;padding:.6rem .9rem;margin-bottom:1rem;font-size:.85rem;color:#065f46;">
+  🎂 ¡Hoy cumplen años {{ cumple_hoy_count }} cliente(s)! Acordate de felicitarlas.
+</div>
+{% endif %}
+
 {% if clientes %}
-<div class="panel">
+<div class="panel" style="padding:0;overflow:hidden;">
   <table class="tabla">
     <thead>
       <tr>
         <th>Nombre</th>
         <th>Teléfono</th>
-        <th>Cumpleaños</th>
-        <th>Notas</th>
+        {% if vista == 'activos' %}<th>Cumpleaños</th>{% endif %}
+        {% if vista == 'inactivos' %}<th>Última visita</th><th>Días sin visitar</th>{% endif %}
+        {% if vista == 'cumpleanos' %}<th>Fecha nac.</th>{% endif %}
+        <th>Fidelidad</th>
         <th></th>
       </tr>
     </thead>
@@ -32,28 +60,65 @@
       <tr>
         <td>
           <a href="/clientes/{{ c.id }}" class="link-nombre">{{ c.nombre }}</a>
+          {% if c.alergias %}
+          <span title="Alergias: {{ c.alergias }}" style="color:#ef4444;margin-left:.3rem;cursor:help;">⚠️</span>
+          {% endif %}
+          {% if c.beneficio_disponible %}
+          <span title="Tiene beneficio de fidelidad disponible" style="margin-left:.3rem;cursor:help;">🎁</span>
+          {% endif %}
         </td>
-        <td>{{ c.telefono or '—' }}</td>
         <td>
-          {% if c.fecha_nacimiento %}
-            {{ c.fecha_nacimiento.strftime('%d/%m') }}
-          {% else %}—{% endif %}
+          {% if c.telefono %}
+          <a href="https://wa.me/54{{ c.telefono|replace('-','')|replace(' ','') }}" target="_blank"
+             style="color:var(--text);text-decoration:none;">{{ c.telefono }}</a>
+          {% else %}<span class="text-muted">—</span>{% endif %}
         </td>
-        <td class="td-notas">{{ c.notas | truncate(50) if c.notas else '—' }}</td>
+        {% if vista == 'activos' %}
+        <td style="color:var(--text-muted);font-size:.82rem;">
+          {{ c.fecha_nacimiento.strftime('%d %b') if c.fecha_nacimiento else '—' }}
+        </td>
+        {% endif %}
+        {% if vista == 'inactivos' %}
+        <td style="font-size:.82rem;">{{ c._ultima_visita|ar_fecha if c._ultima_visita else '—' }}</td>
+        <td>
+          <span style="color:{% if c._dias_sin_visitar > 90 %}#ef4444{% else %}#f59e0b{% endif %};font-weight:600;">
+            {{ c._dias_sin_visitar }} días
+          </span>
+        </td>
+        {% endif %}
+        {% if vista == 'cumpleanos' %}
+        <td>{{ c.fecha_nacimiento.strftime('%d de %B') if c.fecha_nacimiento else '—' }}</td>
+        {% endif %}
+        <td>
+          {% if c.beneficio_disponible %}
+          <span style="font-size:.75rem;padding:.15rem .5rem;border-radius:12px;background:#d1fae5;color:#065f46;">🎁 Disponible</span>
+          {% else %}
+          <span style="font-size:.75rem;color:var(--text-muted);">—</span>
+          {% endif %}
+        </td>
         <td class="td-actions">
-          <a href="/clientes/{{ c.id }}" class="btn btn-sm btn-outline">Ver</a>
-          <a href="/clientes/{{ c.id }}/editar" class="btn btn-sm btn-ghost">Editar</a>
+          <a href="/ventas/nueva?cliente_id={{ c.id }}" class="btn btn-sm btn-ghost" title="Nueva venta">💰</a>
+          <a href="/turnos/nuevo?cliente_id={{ c.id }}" class="btn btn-sm btn-ghost" title="Nuevo turno">📅</a>
+          <a href="/clientes/{{ c.id }}/editar" class="btn btn-sm btn-ghost" title="Editar">✏️</a>
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+<div style="color:var(--text-muted);font-size:.8rem;margin-top:.5rem;">{{ clientes|length }} cliente(s)</div>
 {% else %}
 <div class="empty-state">
   <div class="empty-icon">👤</div>
-  <p>No se encontraron clientes{% if q %} para "{{ q }}"{% endif %}.</p>
-  <a href="/clientes/nuevo" class="btn btn-primary">Agregar primera cliente</a>
+  <p>
+    {% if vista == 'inactivos' %}No hay clientes inactivos — ¡excelente!
+    {% elif vista == 'cumpleanos' %}No hay cumpleaños hoy.
+    {% elif q %}No se encontraron resultados para "{{ q }}".
+    {% else %}Aún no hay clientes. ¡Empezá agregando el primero!{% endif %}
+  </p>
+  {% if not q and vista == 'activos' %}
+  <a href="/clientes/nuevo" class="btn btn-primary">Agregar cliente</a>
+  {% endif %}
 </div>
 {% endif %}
 {% endblock %}

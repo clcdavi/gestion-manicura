@@ -30,6 +30,8 @@
   </div>
 </div>
 
+{% if flash_msg %}<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>{% endif %}
+
 {% if ventas %}
 <div class="panel">
   <table class="tabla">
@@ -51,8 +53,7 @@
           {% if v.cliente %}
           <a href="/clientes/{{ v.cliente.id }}" class="link-nombre">{{ v.cliente.nombre }}</a>
           {% else %}
-          <button type="button" class="btn btn-sm btn-ghost"
-                  onclick="abrirModalAsignar({{ v.id }})">+ Asignar</button>
+          <button type="button" class="btn btn-sm btn-ghost" onclick="abrirModalAsignar({{ v.id }})">+ Asignar</button>
           {% endif %}
         </td>
         <td>
@@ -70,13 +71,24 @@
           {% endif %}
         </td>
         <td>
+          {% if v.forma_pago == 'mixto' and v.pagos %}
+          <div>
+            {% for p in v.pagos %}
+            <span class="badge-pago badge-pago-{{ p.metodo }}"
+              style="font-size:.7rem;display:block;margin-bottom:.1rem;">
+              {{ p.metodo }}: {{ p.monto|pesos }}
+            </span>
+            {% endfor %}
+          </div>
+          {% else %}
           <span class="badge-pago badge-pago-{{ v.forma_pago }}">{{ v.forma_pago }}</span>
+          {% endif %}
         </td>
         <td class="td-actions">
-          <button type="button" class="btn btn-sm btn-danger-ghost"
-                  onclick="abrirModalEliminar({{ v.id }})">✕</button>
-          <form method="post" action="/ventas/{{ v.id }}/eliminar"
-                id="form-eliminar-{{ v.id }}" style="display:none"></form>
+          <a href="/ventas/{{ v.id }}/editar" class="btn btn-sm btn-ghost" title="Editar venta">✏️</a>
+          <button type="button" class="btn btn-sm btn-danger-ghost" onclick="abrirModalEliminar({{ v.id }})">✕</button>
+          <form method="post" action="/ventas/{{ v.id }}/eliminar" id="form-eliminar-{{ v.id }}" style="display:none">
+          </form>
         </td>
       </tr>
       {% endfor %}
@@ -95,14 +107,14 @@
 <div id="modalEliminar" class="modal-overlay" style="display:none" onclick="cerrarModalEliminar(event)">
   <div class="modal-box">
     <h3 style="margin-top:0">Eliminar venta</h3>
-    <p class="text-muted">Esta acción no se puede deshacer. Para confirmar, escribí <strong>ELIMINAR</strong> en mayúsculas.</p>
-    <input type="text" id="inputConfirmarEliminar" placeholder="ELIMINAR"
-           oninput="verificarEliminar(this.value)"
-           style="width:100%;margin:.75rem 0;font-size:1rem;padding:.5rem .75rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">
+    <p class="text-muted">Esta acción no se puede deshacer. Para confirmar, escribí <strong>ELIMINAR</strong> en
+      mayúsculas.</p>
+    <input type="text" id="inputConfirmarEliminar" placeholder="ELIMINAR" oninput="verificarEliminar(this.value)"
+      style="width:100%;margin:.75rem 0;font-size:1rem;padding:.5rem .75rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">
     <div style="display:flex;gap:.75rem;justify-content:flex-end">
       <button type="button" class="btn btn-ghost" onclick="cerrarModalEliminar()">Cancelar</button>
-      <button type="button" class="btn btn-danger" id="btnConfirmarEliminar"
-              disabled onclick="ejecutarEliminar()">Eliminar</button>
+      <button type="button" class="btn btn-danger" id="btnConfirmarEliminar" disabled
+        onclick="ejecutarEliminar()">Eliminar</button>
     </div>
   </div>
 </div>
@@ -115,7 +127,7 @@
       <div class="form-group">
         <label>Seleccioná un cliente</label>
         <select name="cliente_id" required
-                style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:1rem">
+          style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:1rem">
           <option value="">— Elegir cliente —</option>
           {% for c in clientes %}
           <option value="{{ c.id }}">{{ c.nombre }}{% if c.telefono %} · {{ c.telefono }}{% endif %}</option>
@@ -131,54 +143,64 @@
 </div>
 
 <style>
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.45);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
-}
-.modal-box {
-  background: var(--surface); border-radius: 12px; padding: 1.5rem;
-  width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
-}
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-box {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+  }
 </style>
 
 <script>
-var _ventaIdEliminar = null;
+  var _ventaIdEliminar = null;
 
-function abrirModalEliminar(id) {
-  _ventaIdEliminar = id;
-  document.getElementById('inputConfirmarEliminar').value = '';
-  document.getElementById('btnConfirmarEliminar').disabled = true;
-  document.getElementById('modalEliminar').style.display = 'flex';
-  setTimeout(function(){ document.getElementById('inputConfirmarEliminar').focus(); }, 50);
-}
-
-function cerrarModalEliminar(e) {
-  if (!e || e.target === document.getElementById('modalEliminar')) {
-    document.getElementById('modalEliminar').style.display = 'none';
-    _ventaIdEliminar = null;
+  function abrirModalEliminar(id) {
+    _ventaIdEliminar = id;
+    document.getElementById('inputConfirmarEliminar').value = '';
+    document.getElementById('btnConfirmarEliminar').disabled = true;
+    document.getElementById('modalEliminar').style.display = 'flex';
+    setTimeout(function () { document.getElementById('inputConfirmarEliminar').focus(); }, 50);
   }
-}
 
-function verificarEliminar(val) {
-  document.getElementById('btnConfirmarEliminar').disabled = (val !== 'ELIMINAR');
-}
-
-function ejecutarEliminar() {
-  if (_ventaIdEliminar) {
-    document.getElementById('form-eliminar-' + _ventaIdEliminar).submit();
+  function cerrarModalEliminar(e) {
+    if (!e || e.target === document.getElementById('modalEliminar')) {
+      document.getElementById('modalEliminar').style.display = 'none';
+      _ventaIdEliminar = null;
+    }
   }
-}
 
-function abrirModalAsignar(id) {
-  document.getElementById('formAsignar').action = '/ventas/' + id + '/asignar-cliente';
-  document.getElementById('formAsignar').querySelector('select').value = '';
-  document.getElementById('modalAsignar').style.display = 'flex';
-}
-
-function cerrarModalAsignar(e) {
-  if (!e || e.target === document.getElementById('modalAsignar')) {
-    document.getElementById('modalAsignar').style.display = 'none';
+  function verificarEliminar(val) {
+    document.getElementById('btnConfirmarEliminar').disabled = (val !== 'ELIMINAR');
   }
-}
+
+  function ejecutarEliminar() {
+    if (_ventaIdEliminar) {
+      document.getElementById('form-eliminar-' + _ventaIdEliminar).submit();
+    }
+  }
+
+  function abrirModalAsignar(id) {
+    document.getElementById('formAsignar').action = '/ventas/' + id + '/asignar-cliente';
+    document.getElementById('formAsignar').querySelector('select').value = '';
+    document.getElementById('modalAsignar').style.display = 'flex';
+  }
+
+  function cerrarModalAsignar(e) {
+    if (!e || e.target === document.getElementById('modalAsignar')) {
+      document.getElementById('modalAsignar').style.display = 'none';
+    }
+  }
 </script>
 {% endblock %}

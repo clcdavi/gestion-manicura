@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}Agenda de Turnos{% endblock %}
+{% block header_title %}📅 Agenda Semanal{% endblock %}
+
+{% block content %}
+<style>
+.agenda-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.agenda-nav {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.agenda-nav .btn-nav {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: .4rem .85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .9rem;
+  text-decoration: none;
+  transition: background .15s;
+}
+.agenda-nav .btn-nav:hover { background: var(--bg-secondary); }
+.semana-label {
+  font-weight: 600;
+  font-size: .95rem;
+  color: var(--text);
+  min-width: 180px;
+  text-align: center;
+}
+.gcal-badge {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem .8rem;
+  border-radius: 8px;
+  font-size: .8rem;
+  font-weight: 500;
+}
+.gcal-badge.connected { background: #d1fae5; color: #065f46; }
+.gcal-badge.disconnected { background: var(--bg-secondary); color: var(--text-muted); }
+
+/* ── Grilla calendario ── */
+.calendar-wrap {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.cal-header {
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr);
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-secondary);
+}
+.cal-header-cell {
+  padding: .6rem .4rem;
+  text-align: center;
+  font-size: .8rem;
+  font-weight: 600;
+  border-right: 1px solid var(--border);
+}
+.cal-header-cell:last-child { border-right: none; }
+.cal-header-cell.hoy {
+  background: var(--primary);
+  color: white;
+}
+.cal-header-cell .day-num {
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: block;
+}
+.cal-body {
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr);
+  position: relative;
+}
+.cal-time-col {
+  display: flex;
+  flex-direction: column;
+}
+.cal-time-slot {
+  height: 52px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-right: 6px;
+  font-size: .7rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding-top: 2px;
+}
+.cal-day-col {
+  border-right: 1px solid var(--border);
+  position: relative;
+  min-height: 728px; /* 14 horas × 52px */
+}
+.cal-day-col:last-child { border-right: none; }
+.cal-hour-line {
+  position: absolute;
+  left: 0; right: 0;
+  border-top: 1px solid var(--border);
+  opacity: .5;
+}
+.cal-turno {
+  position: absolute;
+  left: 3px; right: 3px;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: .72rem;
+  line-height: 1.3;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+  transition: opacity .15s, transform .1s;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+.cal-turno:hover { opacity: .9; transform: scale(1.01); }
+.cal-turno .t-nombre { font-weight: 700; }
+.cal-turno .t-hora { opacity: .9; }
+.cal-turno .t-servicio { opacity: .85; font-size: .68rem; }
+.cal-new-btn {
+  position: absolute;
+  left: 0; right: 0;
+  background: rgba(var(--primary-rgb, 91,108,246), .06);
+  opacity: 0;
+  cursor: pointer;
+  font-size: .65rem;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .15s;
+  text-decoration: none;
+}
+.cal-day-col:hover .cal-new-btn { opacity: 1; }
+.cal-new-btn:hover { background: rgba(var(--primary-rgb, 91,108,246), .14); }
+
+/* ── Estados badges ── */
+.badge-estado { display:inline-block; padding:.2rem .5rem; border-radius:12px; font-size:.72rem; font-weight:600; }
+.badge-pendiente   { background:#fef3c7; color:#92400e; }
+.badge-confirmado  { background:#d1fae5; color:#065f46; }
+.badge-realizado   { background:#f1f5f9; color:#475569; }
+.badge-cancelado   { background:#fee2e2; color:#991b1b; }
+
+.actions-top {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+</style>
+
+{% if flash_msg %}
+<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<div class="agenda-toolbar">
+  <div class="agenda-nav">
+    <a href="/turnos?semana={{ semana_anterior }}" class="btn-nav">← Ant.</a>
+    <span class="semana-label">
+      {{ lunes.strftime('%d/%m') }} — {{ domingo.strftime('%d/%m/%Y') }}
+    </span>
+    <a href="/turnos?semana={{ semana_siguiente }}" class="btn-nav">Sig. →</a>
+    <a href="/turnos?semana={{ semana_actual }}" class="btn-nav" style="font-size:.8rem;">Hoy</a>
+  </div>
+
+  <div class="actions-top">
+    <!-- Estado GCal -->
+    {% if gcal_connected %}
+    <div class="gcal-badge connected">
+      <span>📅</span> Google Calendar conectado
+      <form action="/auth/google/disconnect" method="post" style="display:inline">
+        <button type="submit" style="background:none;border:none;color:#065f46;cursor:pointer;font-size:.75rem;text-decoration:underline;padding:0;margin-left:4px;">Desconectar</button>
+      </form>
+    </div>
+    {% else %}
+    <a href="/auth/google" class="gcal-badge disconnected" style="text-decoration:none;">
+      🔗 Conectar Google Calendar
+    </a>
+    {% endif %}
+
+    <a href="/turnos/lista" class="btn btn-ghost" style="font-size:.85rem;">📋 Ver lista</a>
+    <a href="/turnos/nuevo" class="btn btn-primary">+ Nuevo Turno</a>
+  </div>
+</div>
+
+<!-- Grilla Calendario -->
+<div class="calendar-wrap">
+  <!-- Header días -->
+  <div class="cal-header">
+    <div class="cal-header-cell" style="font-size:.65rem;"></div>
+    {% for dia in dias %}
+    <div class="cal-header-cell {% if dia.es_hoy %}hoy{% endif %}">
+      <span>{{ dia.nombre }}</span>
+      <span class="day-num">{{ dia.fecha.strftime('%d') }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Body con horas y días -->
+  <div class="cal-body">
+    <!-- Columna de horas -->
+    <div class="cal-time-col">
+      {% for hora in horas %}
+      <div class="cal-time-slot">{{ hora }}</div>
+      {% endfor %}
+    </div>
+
+    <!-- Columnas de días (0=lunes...6=domingo) -->
+    {% for d_idx in range(7) %}
+    <div class="cal-day-col" id="col-dia-{{ d_idx }}">
+      <!-- Líneas de hora -->
+      {% for h_idx in range(14) %}
+      <div class="cal-hour-line" style="top: {{ h_idx * 52 }}px;"></div>
+      {% endfor %}
+
+      <!-- Turnos de este día -->
+      {% for td in turnos_data %}
+      {% if td.dia_semana == d_idx %}
+      <a class="cal-turno"
+         href="/turnos/{{ td.turno.id }}/editar"
+         style="top: {{ (td.minutos_desde_8 / 60 * 52)|int }}px;
+                height: {{ [td.duracion_min / 60 * 52 - 4, 22]|max|int }}px;
+                background: {{ td.color }};"
+         title="{{ td.cliente_nombre }} — {{ td.inicio_ar.strftime('%H:%M') }} a {{ td.fin_ar.strftime('%H:%M') }}">
+        <div class="t-hora">{{ td.inicio_ar.strftime('%H:%M') }}–{{ td.fin_ar.strftime('%H:%M') }}</div>
+        <div class="t-nombre">{{ td.cliente_nombre }}</div>
+        {% if td.turno.servicios_nombres %}
+        <div class="t-servicio">{{ td.turno.servicios_nombres[:30] }}</div>
+        {% endif %}
+      </a>
+      {% endif %}
+      {% endfor %}
+
+      <!-- Botones de nueva cita (cada hora) -->
+      {% for h_idx in range(14) %}
+      {% set hora_num = h_idx + 8 %}
+      {% set dia_fecha = dias[d_idx].fecha.isoformat() %}
+      <a class="cal-new-btn"
+         href="/turnos/nuevo?fecha={{ dia_fecha }}&hora={{ '%02d'|format(hora_num) }}:00"
+         style="top: {{ h_idx * 52 }}px; height: 52px;">
+        + nuevo
+      </a>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Leyenda -->
+<div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem;font-size:.8rem;">
+  <span class="badge-estado badge-pendiente">● Pendiente</span>
+  <span class="badge-estado badge-confirmado">● Confirmado</span>
+  <span class="badge-estado badge-realizado">● Realizado</span>
+  <span class="badge-estado badge-cancelado">● Cancelado</span>
+</div>
+{% endblock %}

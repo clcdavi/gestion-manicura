@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Lista de Turnos{% endblock %}
+{% block header_title %}📋 Lista de Turnos{% endblock %}
+
+{% block content %}
+{% if flash_msg %}
+<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:1rem;">
+  <form method="get" action="/turnos/lista" style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;">
+    <div class="form-group" style="margin:0;">
+      <label class="form-label" style="font-size:.8rem;">Desde</label>
+      <input type="date" name="desde" value="{{ filtro_desde }}" class="form-control" style="padding:.35rem .6rem;">
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label class="form-label" style="font-size:.8rem;">Hasta</label>
+      <input type="date" name="hasta" value="{{ filtro_hasta }}" class="form-control" style="padding:.35rem .6rem;">
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label class="form-label" style="font-size:.8rem;">Estado</label>
+      <select name="estado" class="form-control" style="padding:.35rem .6rem;">
+        <option value="">Todos</option>
+        {% for e in estados %}
+        <option value="{{ e }}" {% if e == filtro_estado %}selected{% endif %}>{{ e|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label class="form-label" style="font-size:.8rem;">Cliente</label>
+      <select name="cliente_id" class="form-control" style="padding:.35rem .6rem;">
+        <option value="">Todos</option>
+        {% for c in clientes %}
+        <option value="{{ c.id }}" {% if filtro_cliente_id == c.id|string %}selected{% endif %}>{{ c.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="padding:.4rem 1rem;">Filtrar</button>
+    <a href="/turnos" class="btn btn-ghost" style="padding:.4rem .8rem;">📅 Calendario</a>
+    <a href="/turnos/nuevo" class="btn btn-primary" style="padding:.4rem 1rem;">+ Nuevo</a>
+  </form>
+</div>
+
+{% if turnos %}
+<div class="card" style="padding:0;overflow:hidden;">
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="background:var(--bg-secondary);font-size:.82rem;">
+        <th style="padding:.6rem .8rem;text-align:left;">Fecha y Hora</th>
+        <th style="padding:.6rem .8rem;text-align:left;">Cliente</th>
+        <th style="padding:.6rem .8rem;text-align:left;">Servicios</th>
+        <th style="padding:.6rem .8rem;text-align:center;">Estado</th>
+        <th style="padding:.6rem .8rem;text-align:center;">GCal</th>
+        <th style="padding:.6rem .8rem;text-align:right;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in turnos %}
+      <tr style="border-top:1px solid var(--border);font-size:.85rem;" class="table-row-hover">
+        <td style="padding:.6rem .8rem;">
+          <strong>{{ t._inicio_ar.strftime('%d/%m/%Y') }}</strong>
+          <br><span style="color:var(--text-muted);font-size:.8rem;">
+            {{ t._inicio_ar.strftime('%H:%M') }} – {{ t._fin_ar.strftime('%H:%M') }}
+          </span>
+        </td>
+        <td style="padding:.6rem .8rem;">
+          {% if t.cliente %}
+          <a href="/clientes/{{ t.cliente_id }}" style="color:var(--primary);">{{ t.cliente.nombre }}</a>
+          {% else %}
+          <span class="text-muted">Sin asignar</span>
+          {% endif %}
+        </td>
+        <td style="padding:.6rem .8rem;color:var(--text-muted);font-size:.8rem;">
+          {{ t.servicios_nombres or '—' }}
+        </td>
+        <td style="padding:.6rem .8rem;text-align:center;">
+          <span class="badge-estado badge-{{ t.estado }}">{{ t.estado|capitalize }}</span>
+        </td>
+        <td style="padding:.6rem .8rem;text-align:center;font-size:.85rem;">
+          {{ '📅' if t.gcal_event_id else '—' }}
+        </td>
+        <td style="padding:.6rem .8rem;text-align:right;">
+          <div style="display:flex;gap:.3rem;justify-content:flex-end;flex-wrap:wrap;">
+            {% if t.estado == 'pendiente' %}
+            <form action="/turnos/{{ t.id }}/confirmar" method="post" style="display:inline">
+              <button type="submit" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;color:#065f46;">✓ Confirmar</button>
+            </form>
+            {% endif %}
+            {% if t.estado in ['pendiente', 'confirmado'] %}
+            <form action="/turnos/{{ t.id }}/realizar" method="post" style="display:inline">
+              <button type="submit" class="btn btn-primary" style="font-size:.75rem;padding:.25rem .6rem;">💰 Realizar</button>
+            </form>
+            <form action="/turnos/{{ t.id }}/cancelar" method="post" style="display:inline">
+              <button type="submit" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;color:var(--danger);">✕ Cancelar</button>
+            </form>
+            {% endif %}
+            <a href="/turnos/{{ t.id }}/editar" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;">✏️</a>
+            <form action="/turnos/{{ t.id }}/eliminar" method="post" style="display:inline"
+                  onsubmit="return confirm('¿Eliminar este turno?')">
+              <button type="submit" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;color:var(--danger);">🗑</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div style="color:var(--text-muted);font-size:.82rem;margin-top:.5rem;">
+  {{ turnos|length }} turno(s) encontrado(s)
+</div>
+{% else %}
+<div class="empty-state">
+  <div style="font-size:3rem;">📅</div>
+  <p>No hay turnos para este período.</p>
+  <a href="/turnos/nuevo" class="btn btn-primary">Crear primer turno</a>
+</div>
+{% endif %}
+
+<style>
+.badge-estado { display:inline-block;padding:.2rem .55rem;border-radius:12px;font-size:.72rem;font-weight:600; }
+.badge-pendiente   { background:#fef3c7;color:#92400e; }
+.badge-confirmado  { background:#d1fae5;color:#065f46; }
+.badge-realizado   { background:#f1f5f9;color:#475569; }
+.badge-cancelado   { background:#fee2e2;color:#991b1b; }
+.table-row-hover:hover { background:var(--bg-secondary); }
+</style>
+{% endblock %}

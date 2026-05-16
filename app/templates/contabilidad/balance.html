@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Balance Anual{% endblock %}
+{% block header_title %}📊 Balance Anual{% endblock %}
+{% block content %}
+<div class="card" style="margin-bottom:1rem;padding:.75rem 1rem;">
+  <form method="get" action="/contabilidad/balance" style="display:flex;gap:.75rem;align-items:flex-end;">
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Año</label>
+      <select name="anio" class="form-control" style="padding:.35rem .6rem;" onchange="this.form.submit()">
+        {% for a in anios_disponibles %}<option value="{{ a }}" {% if a==anio_int %}selected{% endif %}>{{ a }}</option>{% endfor %}
+      </select>
+    </div>
+    <a href="/contabilidad/exportar/csv/balance?anio={{ anio_int }}" class="btn btn-ghost">⬇️ CSV</a>
+    <a href="/contabilidad/exportar/excel?anio={{ anio_int }}&mes=1&desde={{ anio_int }}-01-01&hasta={{ anio_int }}-12-31" class="btn btn-ghost">⬇️ Excel</a>
+  </form>
+</div>
+
+<!-- KPIs anuales -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.25rem;">
+  <div class="stat-card" style="background:linear-gradient(135deg,#10b981,#059669);color:white;">
+    <div class="stat-label" style="color:rgba(255,255,255,.8);">Ingresos {{ anio_int }}</div>
+    <div class="stat-value">{{ balance.total_ingresos|pesos }}</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;">
+    <div class="stat-label" style="color:rgba(255,255,255,.8);">Egresos {{ anio_int }}</div>
+    <div class="stat-value">{{ balance.total_egresos|pesos }}</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#5b6cf6,#4f46e5);color:white;">
+    <div class="stat-label" style="color:rgba(255,255,255,.8);">Resultado Anual</div>
+    <div class="stat-value">{{ balance.resultado_anual|pesos }}</div>
+    <div style="font-size:.78rem;opacity:.85;">Margen: {{ balance.margen_anual }}%</div>
+  </div>
+</div>
+
+<div class="card" style="padding:0;overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+    <thead>
+      <tr style="background:var(--bg-secondary);">
+        <th style="padding:.6rem .8rem;text-align:left;">Mes</th>
+        <th style="padding:.6rem .8rem;text-align:center;">Ventas</th>
+        <th style="padding:.6rem .8rem;text-align:right;">Ingresos</th>
+        <th style="padding:.6rem .8rem;text-align:right;">Egresos</th>
+        <th style="padding:.6rem .8rem;text-align:right;">Resultado</th>
+        <th style="padding:.6rem .8rem;text-align:right;">Margen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in balance.meses %}
+      <tr style="border-top:1px solid var(--border);{% if m.ingresos == 0 %}color:var(--text-muted);{% endif %}">
+        <td style="padding:.55rem .8rem;font-weight:{% if m.ingresos > 0 %}600{% else %}400{% endif %};">{{ m.nombre }}</td>
+        <td style="padding:.55rem .8rem;text-align:center;">{{ m.cantidad_ventas or '—' }}</td>
+        <td style="padding:.55rem .8rem;text-align:right;color:{% if m.ingresos > 0 %}#10b981{% else %}var(--text-muted){% endif %};">{{ m.ingresos|pesos }}</td>
+        <td style="padding:.55rem .8rem;text-align:right;color:{% if m.egresos > 0 %}#ef4444{% else %}var(--text-muted){% endif %};">{{ m.egresos|pesos }}</td>
+        <td style="padding:.55rem .8rem;text-align:right;font-weight:600;color:{% if m.resultado >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+          {{ m.resultado|pesos }}
+        </td>
+        <td style="padding:.55rem .8rem;text-align:right;">
+          {% if m.ingresos > 0 %}
+          <span style="padding:.15rem .4rem;border-radius:4px;font-size:.78rem;background:{% if m.margen_pct >= 30 %}#d1fae5;color:#065f46{% elif m.margen_pct >= 0 %}#fef3c7;color:#92400e{% else %}#fee2e2;color:#991b1b{% endif %};">
+            {{ m.margen_pct }}%
+          </span>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr style="background:var(--bg-secondary);font-weight:700;border-top:2px solid var(--border);">
+        <td style="padding:.6rem .8rem;">TOTAL {{ anio_int }}</td>
+        <td></td>
+        <td style="padding:.6rem .8rem;text-align:right;color:#10b981;">{{ balance.total_ingresos|pesos }}</td>
+        <td style="padding:.6rem .8rem;text-align:right;color:#ef4444;">{{ balance.total_egresos|pesos }}</td>
+        <td style="padding:.6rem .8rem;text-align:right;color:{% if balance.resultado_anual >= 0 %}#10b981{% else %}#ef4444{% endif %};">{{ balance.resultado_anual|pesos }}</td>
+        <td style="padding:.6rem .8rem;text-align:right;">{{ balance.margen_anual }}%</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<div style="margin-top:1rem;"><a href="/contabilidad" class="btn btn-ghost">← Volver</a></div>
+{% endblock %}

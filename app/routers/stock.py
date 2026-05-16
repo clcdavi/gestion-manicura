@@ -104,6 +104,98 @@ def eliminar_categoria(cat_id: int, db: Session = Depends(get_db)):
     return RedirectResponse(url="/stock", status_code=303)
 
 
+# ── Compras de Stock ──────────────────────────────────────────────────────────
+
+@router.get("/compras", response_class=HTMLResponse)
+def lista_compras(request: Request, producto_id: str = "", db: Session = Depends(get_db)):
+    query = db.query(models.CompraStock).order_by(models.CompraStock.fecha.desc())
+    if producto_id and producto_id.isdigit():
+        query = query.filter_by(producto_id=int(producto_id))
+    compras = query.limit(100).all()
+    total_invertido = sum(c.cantidad * c.precio_unitario for c in compras)
+    productos = db.query(models.ProductoStock).filter_by(activo=True).order_by(
+        models.ProductoStock.nombre
+    ).all()
+    flash_msg = request.session.pop("flash", None)
+    flash_type = request.session.pop("flash_type", "success")
+    return templates.TemplateResponse("stock/compras.html", {
+        "request": request, "compras": compras, "total_invertido": total_invertido,
+        "productos": productos, "filtro_producto_id": producto_id,
+        "flash_msg": flash_msg, "flash_type": flash_type,
+    })
+
+
+@router.get("/compras/nueva", response_class=HTMLResponse)
+def form_nueva_compra(request: Request, producto_id: str = "", db: Session = Depends(get_db)):
+    productos = db.query(models.ProductoStock).filter_by(activo=True).order_by(
+        models.ProductoStock.nombre
+    ).all()
+    pre_producto = None
+    if producto_id and producto_id.isdigit():
+        pre_producto = db.query(models.ProductoStock).filter_by(id=int(producto_id)).first()
+    return templates.TemplateResponse("stock/compra_form.html", {
+        "request": request, "productos": productos, "pre_producto": pre_producto,
+    })
+
+
+@router.post("/compras/nueva")
+async def registrar_compra(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    producto_id = form.get("producto_id", "")
+    if not producto_id or not producto_id.isdigit():
+        request.session["flash"] = "Selecciona un producto."
+        request.session["flash_type"] = "error"
+        return RedirectResponse(url="/stock/compras/nueva", status_code=303)
+    producto = db.query(models.ProductoStock).filter_by(id=int(producto_id)).first()
+    if not producto:
+        raise HTTPException(status_code=404)
+    try:
+        cantidad = float(form.get("cantidad", 0))
+        precio_unitario = float(form.get("precio_unitario", 0))
+    except (ValueError, TypeError):
+        request.session["flash"] = "Cantidad y precio deben ser numeros."
+        request.session["flash_type"] = "error"
+        return RedirectResponse(url="/stock/compras/nueva", status_code=303)
+    if cantidad <= 0:
+        request.session["flash"] = "Cantidad debe ser mayor a 0."
+        request.session["flash_type"] = "error"
+        return RedirectResponse(url="/stock/compras/nueva", status_code=303)
+    proveedor = form.get("proveedor", "")
+    factura_nro = form.get("factura_nro", "")
+    notas = form.get("notas", "")
+    actualizar_precio = form.get("actualizar_precio") == "1"
+    compra = models.CompraStock(
+        producto_id=int(producto_id), cantidad=cantidad, precio_unitario=precio_unitario,
+        proveedor=proveedor, factura_nro=factura_nro, notas=notas,
+    )
+    db.add(compra)
+    producto.cantidad_actual += cantidad
+    if actualizar_precio and precio_unitario > 0:
+        producto.costo_unitario = precio_unitario
+    db.add(models.StockMovimiento(
+        producto_id=int(producto_id), cantidad=cantidad, tipo="compra",
+        descripcion=f"Compra: {proveedor or 'Sin proveedor'} - Factura: {factura_nro or 'S/N'}",
+    ))
+    db.commit()
+    request.session["flash"] = f"Compra de {cantidad} {producto.unidad} de {producto.nombre} registrada."
+    request.session["flash_type"] = "success"
+    return RedirectResponse(url="/stock/compras", status_code=303)
+
+
+@router.post("/compras/{compra_id}/eliminar")
+def eliminar_compra(compra_id: int, request: Request, db: Session = Depends(get_db)):
+    compra = db.query(models.CompraStock).filter_by(id=compra_id).first()
+    if not compra:
+        raise HTTPException(status_code=404)
+    producto = db.query(models.ProductoStock).filter_by(id=compra.producto_id).first()
+    if producto:
+        producto.cantidad_actual = max(0, producto.cantidad_actual - compra.cantidad)
+    db.delete(compra)
+    db.commit()
+    request.session["flash"] = "Compra eliminada y stock revertido."
+    request.session["flash_type"] = "info"
+    return RedirectResponse(url="/stock/compras", status_code=303)
+
 # ── Productos ─────────────────────────────────────────────────────────────────
 
 @router.get("/{producto_id}", response_class=HTMLResponse)
@@ -210,3 +302,4 @@ def eliminar_producto(
         p.activo = False
         db.commit()
     return RedirectResponse(url="/stock", status_code=303)
+

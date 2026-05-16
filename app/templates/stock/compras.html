@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Historial de Compras{% endblock %}
+{% block header_title %}📦 Compras de Insumos{% endblock %}
+{% block content %}
+{% if flash_msg %}<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>{% endif %}
+
+<div class="page-actions" style="margin-bottom:1rem;">
+  <form method="get" action="/stock/compras" style="display:flex;gap:.5rem;align-items:center;flex:1;">
+    <select name="producto_id" class="form-control" style="max-width:250px;padding:.35rem .6rem;" onchange="this.form.submit()">
+      <option value="">— Todos los productos —</option>
+      {% for p in productos %}
+      <option value="{{ p.id }}" {% if filtro_producto_id == p.id|string %}selected{% endif %}>{{ p.nombre }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <a href="/stock/compras/nueva" class="btn btn-primary">+ Registrar compra</a>
+  <a href="/stock" class="btn btn-ghost">← Stock</a>
+</div>
+
+<!-- KPI -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.25rem;">
+  <div class="card" style="text-align:center;padding:.75rem;">
+    <div style="font-size:.78rem;color:var(--text-muted);">Total invertido (vista actual)</div>
+    <div style="font-size:1.3rem;font-weight:700;color:var(--primary);">{{ total_invertido|pesos }}</div>
+  </div>
+  <div class="card" style="text-align:center;padding:.75rem;">
+    <div style="font-size:.78rem;color:var(--text-muted);">Compras registradas</div>
+    <div style="font-size:1.3rem;font-weight:700;">{{ compras|length }}</div>
+  </div>
+</div>
+
+{% if compras %}
+<div class="card" style="padding:0;overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:.84rem;">
+    <thead>
+      <tr style="background:var(--bg-secondary);">
+        <th style="padding:.55rem .7rem;text-align:left;">Fecha</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Producto</th>
+        <th style="padding:.55rem .7rem;text-align:center;">Cantidad</th>
+        <th style="padding:.55rem .7rem;text-align:right;">Precio unit.</th>
+        <th style="padding:.55rem .7rem;text-align:right;">Total</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Proveedor</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Factura</th>
+        <th style="padding:.55rem .7rem;text-align:center;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in compras %}
+      <tr style="border-top:1px solid var(--border);">
+        <td style="padding:.5rem .7rem;color:var(--text-muted);">{{ c.fecha|ar_fecha if c.fecha else '' }}</td>
+        <td style="padding:.5rem .7rem;font-weight:500;">
+          <a href="/stock/{{ c.producto_id }}" style="color:var(--text);text-decoration:none;">{{ c.producto.nombre }}</a>
+        </td>
+        <td style="padding:.5rem .7rem;text-align:center;">{{ c.cantidad }} {{ c.producto.unidad }}</td>
+        <td style="padding:.5rem .7rem;text-align:right;">{{ c.precio_unitario|pesos }}</td>
+        <td style="padding:.5rem .7rem;text-align:right;font-weight:600;">{{ (c.cantidad * c.precio_unitario)|pesos }}</td>
+        <td style="padding:.5rem .7rem;color:var(--text-muted);font-size:.78rem;">{{ c.proveedor or '—' }}</td>
+        <td style="padding:.5rem .7rem;color:var(--text-muted);font-size:.78rem;">{{ c.factura_nro or '—' }}</td>
+        <td style="padding:.5rem .7rem;text-align:center;">
+          <form action="/stock/compras/{{ c.id }}/eliminar" method="post" style="display:inline"
+                onsubmit="return confirm('¿Eliminar esta compra? Se revertirá el stock.')">
+            <button type="submit" class="btn btn-ghost" style="font-size:.75rem;padding:.2rem .5rem;color:var(--danger,#ef4444);">🗑</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div style="font-size:2.5rem;">📦</div>
+  <p>No hay compras registradas aún.</p>
+  <a href="/stock/compras/nueva" class="btn btn-primary">Registrar primera compra</a>
+</div>
+{% endif %}
+{% endblock %}

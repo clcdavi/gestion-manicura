@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Registrar Compra{% endblock %}
+{% block header_title %}📦 Registrar Compra de Insumo{% endblock %}
+{% block content %}
+
+<div class="card" style="max-width:600px;">
+  <form method="post" action="/stock/compras/nueva">
+
+    <div class="form-group">
+      <label class="form-label">Producto *</label>
+      <select name="producto_id" class="form-control" required onchange="actualizarPrecio(this)">
+        <option value="">— Seleccioná un producto —</option>
+        {% for p in productos %}
+        <option value="{{ p.id }}"
+                data-precio="{{ p.costo_unitario }}"
+                data-unidad="{{ p.unidad }}"
+                {% if pre_producto and pre_producto.id == p.id %}selected{% endif %}>
+          {{ p.nombre }} (stock actual: {{ p.cantidad_actual }} {{ p.unidad }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="form-group">
+        <label class="form-label">Cantidad *</label>
+        <input type="number" name="cantidad" class="form-control" min="0.01" step="0.01"
+               placeholder="Ej: 5" required id="inputCantidad">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Precio unitario *</label>
+        <div style="position:relative;">
+          <span style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--text-muted);">$</span>
+          <input type="number" name="precio_unitario" class="form-control" min="0" step="1"
+                 placeholder="0" id="inputPrecio" style="padding-left:1.4rem;" required
+                 oninput="calcularTotal()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Total calculado -->
+    <div id="totalCompra" style="padding:.5rem .75rem;background:var(--bg-secondary);border-radius:8px;margin-bottom:1rem;font-size:.85rem;display:none;">
+      Total de la compra: <strong id="totalCompraValor"></strong>
+    </div>
+
+    <!-- Actualizar precio de costo -->
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;font-size:.85rem;">
+      <input type="checkbox" name="actualizar_precio" value="1" id="chkActualizarPrecio"
+             style="accent-color:var(--primary);">
+      <label for="chkActualizarPrecio">Actualizar el precio de costo del producto con este valor</label>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Proveedor</label>
+      <input type="text" name="proveedor" class="form-control" placeholder="Ej: Distribuidora Nails SA">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">N° de Factura / Remito</label>
+      <input type="text" name="factura_nro" class="form-control" placeholder="Ej: A-0001-00012345">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notas</label>
+      <textarea name="notas" class="form-control" rows="2" placeholder="Observaciones de la compra..."></textarea>
+    </div>
+
+    <div style="display:flex;gap:.75rem;">
+      <button type="submit" class="btn btn-primary">✅ Registrar compra</button>
+      <a href="/stock/compras" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+const precios = {
+  {% for p in productos %}
+  {{ p.id }}: {{ p.costo_unitario }},
+  {% endfor %}
+};
+
+function actualizarPrecio(sel) {
+  const precio = precios[parseInt(sel.value)] || 0;
+  if (precio > 0) {
+    document.getElementById('inputPrecio').value = precio;
+  }
+  calcularTotal();
+}
+
+function calcularTotal() {
+  const cant = parseFloat(document.getElementById('inputCantidad').value) || 0;
+  const precio = parseFloat(document.getElementById('inputPrecio').value) || 0;
+  const total = cant * precio;
+  const el = document.getElementById('totalCompra');
+  if (total > 0) {
+    el.style.display = 'block';
+    document.getElementById('totalCompraValor').textContent =
+      '$' + total.toLocaleString('es-AR', {maximumFractionDigits: 0});
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// Pre-seleccionar si viene con producto_id
+document.getElementById('inputCantidad').addEventListener('input', calcularTotal);
+
+{% if pre_producto %}
+// Pre-cargar precio del producto
+document.getElementById('inputPrecio').value = {{ pre_producto.costo_unitario }};
+{% endif %}
+</script>
+{% endblock %}

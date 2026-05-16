@@ -19,7 +19,17 @@ class Cliente(Base):
     activo = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_now)
 
+    # Ficha técnica
+    color_favorito = Column(String(50), default="")
+    tipo_una = Column(String(30), default="")          # natural/gel/acrílico/fibra
+    alergias = Column(Text, default="")
+    preferencias = Column(Text, default="")
+
+    # Fidelización
+    beneficio_disponible = Column(Boolean, default=False)
+
     ventas = relationship("Venta", back_populates="cliente")
+    turnos = relationship("Turno", back_populates="cliente")
 
 
 class Servicio(Base):
@@ -83,6 +93,7 @@ class ProductoStock(Base):
 
     movimientos = relationship("StockMovimiento", back_populates="producto")
     servicios_asociados = relationship("ServicioProducto", back_populates="producto")
+    compras = relationship("CompraStock", back_populates="producto")
 
 
 class ServicioProducto(Base):
@@ -105,15 +116,16 @@ class Venta(Base):
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True)
     fecha_hora = Column(DateTime, default=_now)
     total = Column(Float, nullable=False)
-    forma_pago = Column(String(20), default="efectivo")  # efectivo / transferencia / tarjeta / mixto
+    forma_pago = Column(String(20), default="efectivo")  # efectivo/transferencia/tarjeta/mixto
     notas = Column(Text, default="")
 
     descuento = Column(Float, default=0)
-    descuento_tipo = Column(String(10), default="pesos")  # "pesos" | "porcentaje"
+    descuento_tipo = Column(String(10), default="pesos")   # "pesos" | "porcentaje"
     descuento_motivo = Column(String(200), default="")
 
     cliente = relationship("Cliente", back_populates="ventas")
     items = relationship("VentaItem", back_populates="venta", cascade="all, delete-orphan")
+    pagos = relationship("VentaPago", back_populates="venta", cascade="all, delete-orphan")
 
 
 class VentaItem(Base):
@@ -122,11 +134,24 @@ class VentaItem(Base):
     id = Column(Integer, primary_key=True)
     venta_id = Column(Integer, ForeignKey("ventas.id"), nullable=False)
     servicio_id = Column(Integer, ForeignKey("servicios.id"), nullable=True)
-    nombre_servicio = Column(String(100))  # snapshot del nombre al momento de la venta
+    nombre_servicio = Column(String(100))          # snapshot del nombre al momento de la venta
     precio_cobrado = Column(Float, nullable=False)
+    costo_materiales_al_momento = Column(Float, nullable=True)  # snapshot del costo de insumos
 
     venta = relationship("Venta", back_populates="items")
     servicio = relationship("Servicio", back_populates="venta_items")
+
+
+class VentaPago(Base):
+    """Desglose de métodos de pago para ventas mixtas."""
+    __tablename__ = "venta_pagos"
+
+    id = Column(Integer, primary_key=True)
+    venta_id = Column(Integer, ForeignKey("ventas.id"), nullable=False)
+    metodo = Column(String(20), nullable=False)    # efectivo / transferencia / tarjeta
+    monto = Column(Float, nullable=False)
+
+    venta = relationship("Venta", back_populates="pagos")
 
 
 class StockMovimiento(Base):
@@ -134,13 +159,29 @@ class StockMovimiento(Base):
 
     id = Column(Integer, primary_key=True)
     producto_id = Column(Integer, ForeignKey("productos_stock.id"), nullable=False)
-    cantidad = Column(Float, nullable=False)  # negativo = salida, positivo = entrada
-    tipo = Column(String(30), default="ajuste")  # venta / ajuste / compra
+    cantidad = Column(Float, nullable=False)        # negativo = salida, positivo = entrada
+    tipo = Column(String(30), default="ajuste")    # venta / ajuste / compra
     descripcion = Column(String(200), default="")
     fecha = Column(DateTime, default=_now)
     venta_id = Column(Integer, ForeignKey("ventas.id"), nullable=True)
 
     producto = relationship("ProductoStock", back_populates="movimientos")
+
+
+class CompraStock(Base):
+    """Registro de compras/reposición de insumos con historial de precios."""
+    __tablename__ = "compras_stock"
+
+    id = Column(Integer, primary_key=True)
+    producto_id = Column(Integer, ForeignKey("productos_stock.id"), nullable=False)
+    cantidad = Column(Float, nullable=False)
+    precio_unitario = Column(Float, nullable=False)
+    proveedor = Column(String(100), default="")
+    factura_nro = Column(String(50), default="")
+    fecha = Column(DateTime, default=_now)
+    notas = Column(Text, default="")
+
+    producto = relationship("ProductoStock", back_populates="compras")
 
 
 class CostoFijo(Base):
@@ -149,7 +190,7 @@ class CostoFijo(Base):
     id = Column(Integer, primary_key=True)
     nombre = Column(String(100), nullable=False)
     monto = Column(Float, nullable=False)
-    categoria = Column(String(20), default="general")  # local/servicios/personal/otros
+    categoria = Column(String(20), default="general")   # local/servicios/personal/otros
     activo = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_now)
 
@@ -164,3 +205,44 @@ class ConfiguracionNegocio(Base):
     admin_pin_hash = Column(String(64), nullable=True)
     admin_token = Column(String(64), nullable=True)
     admin_token_expiry = Column(DateTime, nullable=True)
+
+
+class ConfiguracionFidelizacion(Base):
+    """Configuración del programa de fidelización de clientes."""
+    __tablename__ = "configuracion_fidelizacion"
+
+    id = Column(Integer, primary_key=True)
+    activo = Column(Boolean, default=True)
+    visitas_para_beneficio = Column(Integer, default=10)
+    tipo_beneficio = Column(String(20), default="descuento_pct")  # descuento_pct | servicio_gratis
+    valor_beneficio = Column(Float, default=10.0)   # % o ID de servicio
+
+
+class Turno(Base):
+    """Agenda de turnos del salón."""
+    __tablename__ = "turnos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True)
+    fecha_hora_inicio = Column(DateTime, nullable=False)
+    fecha_hora_fin = Column(DateTime, nullable=False)
+    servicios_ids = Column(Text, default="[]")     # JSON: "[1, 3]"
+    servicios_nombres = Column(Text, default="")   # snapshot legible
+    estado = Column(String(20), default="pendiente")  # pendiente/confirmado/realizado/cancelado
+    notas = Column(Text, default="")
+    gcal_event_id = Column(String(200), nullable=True)  # ID del evento en Google Calendar
+    created_at = Column(DateTime, default=_now)
+
+    cliente = relationship("Cliente", back_populates="turnos")
+
+
+class GoogleCalendarToken(Base):
+    """Tokens OAuth2 para sincronización con Google Calendar (singleton id=1)."""
+    __tablename__ = "google_calendar_tokens"
+
+    id = Column(Integer, primary_key=True)
+    access_token = Column(Text, nullable=True)
+    refresh_token = Column(Text, nullable=True)
+    token_expiry = Column(DateTime, nullable=True)
+    calendar_id = Column(String(200), default="primary")
+    connected_email = Column(String(200), nullable=True)

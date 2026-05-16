@@ -35,6 +35,70 @@
   {% endif %}
 </div>
 
+<!-- ── Alertas operativas del día ─────────────────────────────────────── -->
+{% if turnos_hoy or cumple_hoy or inactivos_count > 0 or beneficios_pendientes > 0 %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-bottom:1.25rem;">
+
+  {% if turnos_hoy %}
+  <div class="card" style="border-left:3px solid var(--primary);padding:1rem 1.25rem;">
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);font-weight:600;margin-bottom:.5rem;">
+      📅 Turnos hoy ({{ turnos_hoy|length }})
+    </div>
+    {% for t in turnos_hoy[:4] %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid var(--border);font-size:.83rem;">
+      <span style="font-weight:500;">{{ t.fecha_hora_inicio|ar_hora }}</span>
+      <span>{{ t.cliente.nombre if t.cliente else 'Sin cliente' }}</span>
+      <span style="font-size:.75rem;color:var(--text-muted);">{{ t.servicios_nombres|truncate(20) }}</span>
+    </div>
+    {% endfor %}
+    {% if turnos_hoy|length > 4 %}
+    <div style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem;">+{{ turnos_hoy|length - 4 }} más</div>
+    {% endif %}
+    <a href="/turnos" style="display:block;font-size:.78rem;margin-top:.5rem;font-weight:600;">Ver agenda →</a>
+  </div>
+  {% endif %}
+
+  {% if cumple_hoy %}
+  <div class="card" style="border-left:3px solid #F59E0B;padding:1rem 1.25rem;background:var(--warn-bg);">
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#92400E;font-weight:600;margin-bottom:.5rem;">
+      🎂 Cumpleaños hoy
+    </div>
+    {% for c in cumple_hoy %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;font-size:.85rem;">
+      <a href="/clientes/{{ c.id }}" style="color:var(--text);font-weight:500;">{{ c.nombre }}</a>
+      {% if c.telefono %}
+      <a href="https://wa.me/54{{ c.telefono|replace('-','')|replace(' ','') }}" target="_blank"
+         style="font-size:.75rem;color:#10b981;">📱 WhatsApp</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if inactivos_count > 0 %}
+  <div class="card" style="border-left:3px solid #EF4444;padding:1rem 1.25rem;">
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);font-weight:600;margin-bottom:.25rem;">
+      💤 Clientes inactivos
+    </div>
+    <div style="font-size:1.4rem;font-weight:700;color:#EF4444;">{{ inactivos_count }}</div>
+    <div style="font-size:.78rem;color:var(--text-muted);">sin visitar hace +60 días</div>
+    <a href="/clientes?vista=inactivos" style="display:block;font-size:.78rem;margin-top:.35rem;font-weight:600;">Ver lista →</a>
+  </div>
+  {% endif %}
+
+  {% if beneficios_pendientes > 0 %}
+  <div class="card" style="border-left:3px solid #10B981;padding:1rem 1.25rem;background:var(--success-bg);">
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#065F46;font-weight:600;margin-bottom:.25rem;">
+      🎁 Beneficios de fidelidad
+    </div>
+    <div style="font-size:1.4rem;font-weight:700;color:#10B981;">{{ beneficios_pendientes }}</div>
+    <div style="font-size:.78rem;color:#065F46;">clientes con beneficio disponible</div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
 <!-- Gráfico principal full-width + datos secundarios -->
 <div class="dashboard-main">
   <div class="chart-card chart-card-main">

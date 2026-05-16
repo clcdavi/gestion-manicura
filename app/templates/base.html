@@ -4,9 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Salón Bella{% endblock %} — Gestión</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    // Anti-flash: aplica tema y dark mode antes del render
+    (function(){
+      var t = localStorage.getItem('salon-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+      var d = localStorage.getItem('salon-dark-mode');
+      if (d === 'true') document.documentElement.setAttribute('data-dark', 'true');
+    })();
+  </script>
 </head>
 <body>
 
@@ -33,6 +42,10 @@
         <span class="nav-icon">&#128203;</span>
         <span class="nav-label">Caja Diaria</span>
       </a>
+      <a href="/turnos" class="nav-item {% if '/turnos' in request.url.path %}active{% endif %}">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">Agenda / Turnos</span>
+      </a>
       <div class="nav-separator"></div>
       <a href="/clientes" class="nav-item {% if '/clientes' in request.url.path %}active{% endif %}">
         <span class="nav-icon">&#128101;</span>
@@ -42,14 +55,26 @@
         <span class="nav-icon">&#10002;</span>
         <span class="nav-label">Servicios</span>
       </a>
-      <a href="/stock" class="nav-item {% if '/stock' in request.url.path %}active{% endif %}">
+      <a href="/stock" class="nav-item {% if '/stock' in request.url.path and 'compras' not in request.url.path %}active{% endif %}">
         <span class="nav-icon">&#128230;</span>
         <span class="nav-label">Stock</span>
       </a>
+      <a href="/stock/compras" class="nav-item {% if 'compras' in request.url.path %}active{% endif %}" style="padding-left:2rem;">
+        <span class="nav-icon" style="font-size:.8rem;">&#128722;</span>
+        <span class="nav-label" style="font-size:.82rem;">Compras de insumos</span>
+      </a>
       <div class="nav-separator"></div>
+      <a href="/contabilidad" class="nav-item {% if '/contabilidad' in request.url.path %}active{% endif %}">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Contabilidad</span>
+      </a>
       <a href="/costos" class="nav-item {% if '/costos' in request.url.path %}active{% endif %}">
         <span class="nav-icon">&#9881;</span>
         <span class="nav-label">Configuración</span>
+      </a>
+      <a href="/configuracion/fidelizacion" class="nav-item {% if '/configuracion/fidelizacion' in request.url.path %}active{% endif %}" style="padding-left:2rem;">
+        <span class="nav-icon" style="font-size:.8rem;">💜</span>
+        <span class="nav-label" style="font-size:.82rem;">Fidelización</span>
       </a>
     </nav>
     <div id="adminIndicator" style="display:none;padding:.4rem 1rem .5rem;border-top:1px solid var(--border);font-size:.78rem">
@@ -66,8 +91,16 @@
     <header class="topbar">
       <button class="menu-toggle" onclick="toggleSidebar()">&#9776;</button>
       <div class="topbar-title">{% block header_title %}{% endblock %}</div>
-      <div class="topbar-right">
+      <!-- Búsqueda global -->
+      <form action="/buscar" method="get" style="display:flex;align-items:center;gap:.35rem;flex:1;max-width:280px;margin:0 1rem;">
+        <input type="text" name="q" placeholder="🔍 Buscar..." class="form-control"
+               style="padding:.3rem .6rem;font-size:.82rem;height:32px;"
+               value="{{ request.query_params.get('q','') }}">
+      </form>
+      <div class="topbar-right" style="display:flex;align-items:center;gap:.4rem;">
         <span class="topbar-date" id="topbar-date"></span>
+        <!-- Dark mode toggle -->
+        <button class="dark-toggle-btn" onclick="toggleDarkMode()" title="Modo oscuro / claro" id="darkToggleBtn">🌙</button>
         <div class="theme-switcher" id="themeSwitcher">
           <button class="theme-toggle-btn" onclick="toggleThemePanel()" title="Cambiar tema">
             <span id="themeIcon">🎨</span>
@@ -219,6 +252,30 @@
       fetch('/api/admin/logout', {method: 'POST'});
       document.getElementById('adminIndicator').style.display = 'none';
     }
+
+    // ── Dark mode ──────────────────────────────────────────────────────────
+    function toggleDarkMode() {
+      var isDark = document.documentElement.getAttribute('data-dark') === 'true';
+      var newVal = isDark ? 'false' : 'true';
+      document.documentElement.setAttribute('data-dark', newVal);
+      localStorage.setItem('salon-dark-mode', newVal);
+      updateDarkIcon();
+    }
+
+    function updateDarkIcon() {
+      var isDark = document.documentElement.getAttribute('data-dark') === 'true';
+      var btn = document.getElementById('darkToggleBtn');
+      if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+    }
+
+    // Aplicar dark mode guardado
+    (function() {
+      var saved = localStorage.getItem('salon-dark-mode');
+      if (saved === 'true') {
+        document.documentElement.setAttribute('data-dark', 'true');
+      }
+      updateDarkIcon();
+    })();
   </script>
   {% block extra_js %}{% endblock %}
 </body>

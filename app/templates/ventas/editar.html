@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Editar Venta #{{ venta.id }}{% endblock %}
+{% block header_title %}✏️ Editar Venta #{{ venta.id }}{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb">
+  <a href="/ventas">Ventas</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">Editar #{{ venta.id }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+{% if flash_msg %}<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>{% endif %}
+
+<form method="post" action="/ventas/{{ venta.id }}/editar" id="formEditarVenta">
+  <div class="venta-layout">
+
+    <!-- Panel izquierdo -->
+    <div class="venta-panel-left">
+
+      <!-- Cliente -->
+      <div class="panel panel-cliente">
+        <div class="panel-section-label">1 · Cliente</div>
+        <select name="cliente_id" class="form-control">
+          <option value="">— Sin cliente —</option>
+          {% for c in clientes %}
+          <option value="{{ c.id }}" {% if venta.cliente_id==c.id %}selected{% endif %}>
+            {{ c.nombre }}{% if c.telefono %} ({{ c.telefono }}){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Forma de pago -->
+      <div class="panel">
+        <div class="panel-section-label">2 · Forma de pago</div>
+        <div class="pago-options">
+          {% for fp in ['efectivo', 'transferencia', 'tarjeta', 'mixto'] %}
+          <label class="pago-option">
+            <input type="radio" name="forma_pago" value="{{ fp }}" {% if venta.forma_pago==fp %}checked{% endif %}
+              onchange="toggleMixto(this.value)">
+            <span>{{ fp | capitalize }}</span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <!-- Desglose mixto -->
+        <div id="panelMixto"
+          style="margin-top:.75rem;display:{% if venta.forma_pago == 'mixto' %}block{% else %}none{% endif %};">
+          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.5rem;">Desglose por método:</div>
+          {% set metodos = ['efectivo', 'transferencia', 'tarjeta'] %}
+          {% for m in metodos %}
+          {% set pago_existente = venta.pagos | selectattr('metodo', 'equalto', m) | first %}
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;">
+            <span style="width:110px;font-size:.83rem;">{{ m|capitalize }}</span>
+            <input type="hidden" name="pago_metodo" value="{{ m }}">
+            <div style="position:relative;flex:1;">
+              <span
+                style="position:absolute;left:.5rem;top:50%;transform:translateY(-50%);color:var(--text-muted);">$</span>
+              <input type="number" name="pago_monto" min="0" step="1"
+                value="{{ pago_existente.monto if pago_existente else 0 }}" style="padding-left:1.2rem;width:100%;"
+                class="form-control" oninput="calcularMixto()">
+            </div>
+          </div>
+          {% endfor %}
+          <div id="avisoMixto" style="font-size:.78rem;margin-top:.3rem;"></div>
+        </div>
+      </div>
+
+      <!-- Descuento -->
+      <div class="panel">
+        <div class="panel-section-label">Descuento</div>
+        <div class="pago-options" style="margin-bottom:.75rem">
+          <label class="pago-option">
+            <input type="radio" name="descuento_tipo" value="pesos" onchange="recalcularDescuento()" {% if
+              venta.descuento_tipo !='porcentaje' %}checked{% endif %}>
+            <span>$ Monto fijo</span>
+          </label>
+          <label class="pago-option">
+            <input type="radio" name="descuento_tipo" value="porcentaje" onchange="recalcularDescuento()" {% if
+              venta.descuento_tipo=='porcentaje' %}checked{% endif %}>
+            <span>% Porcentaje</span>
+          </label>
+        </div>
+        <div class="form-row" style="gap:.5rem">
+          <div class="form-group">
+            <input type="number" name="descuento_valor" id="descuentoValor" min="0" step="1"
+              value="{{ venta.descuento if venta.descuento_tipo == 'pesos' else '' }}" placeholder="0"
+              oninput="recalcularDescuento()">
+          </div>
+          <div class="form-group" style="flex:2">
+            <input type="text" name="descuento_motivo" value="{{ venta.descuento_motivo or '' }}"
+              placeholder="Motivo (opcional)...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Notas -->
+      <div class="panel">
+        <div class="panel-section-label">Notas</div>
+        <textarea name="notas" rows="2" placeholder="Observaciones...">{{ venta.notas or '' }}</textarea>
+      </div>
+    </div>
+
+    <!-- Panel derecho: servicios -->
+    <div class="venta-panel-right">
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-section-label">3 · Servicios</div>
+        <div class="catalogo-grid">
+          {% for s in servicios %}
+          <button type="button" class="catalogo-btn" data-nombre="{{ s.nombre }}" data-precio="{{ s.precio }}"
+            data-id="{{ s.id }}" onclick="agregarItem(this.dataset.nombre, this.dataset.precio, this.dataset.id)">
+            <span class="catalogo-nombre">{{ s.nombre }}</span>
+            <span class="catalogo-precio">{{ s.precio | pesos }}</span>
+          </button>
+          {% endfor %}
+          {% for c in combos %}
+          <button type="button" class="catalogo-btn catalogo-btn-combo" data-nombre="{{ c.nombre }}"
+            data-precio="{{ c.precio }}" onclick="agregarItem(this.dataset.nombre, this.dataset.precio, '')">
+            <span class="catalogo-nombre">📦 {{ c.nombre }}</span>
+            <span class="catalogo-precio">{{ c.precio | pesos }}</span>
+          </button>
+          {% endfor %}
+        </div>
+
+        <div id="itemsContainer" style="margin-top:1.25rem">
+          <table class="tabla" id="tablaItems">
+            <thead>
+              <tr>
+                <th>Servicio</th>
+                <th style="width:130px">Precio</th>
+                <th style="width:44px"></th>
+              </tr>
+            </thead>
+            <tbody id="itemsTbody">
+              {% for item in venta.items %}
+              <tr>
+                <td>
+                  {{ item.nombre_servicio }}
+                  <input type="hidden" name="item_nombre" value="{{ item.nombre_servicio }}">
+                  <input type="hidden" name="item_servicio_id" value="{{ item.servicio_id or '' }}">
+                </td>
+                <td>
+                  <input type="number" name="item_precio" value="{{ item.precio_cobrado }}" min="0" step="1"
+                    class="input-precio-item" oninput="recalcularTotal()">
+                </td>
+                <td>
+                  <button type="button" onclick="eliminarFila(this)" class="btn btn-sm btn-danger-ghost">✕</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer sticky -->
+  <div class="venta-footer" id="ventaFooter" style="display:flex;">
+    <div class="venta-footer-inner">
+      <a href="/ventas" class="btn btn-ghost">Cancelar</a>
+      <div class="venta-footer-total">
+        <span id="subtotalLine" style="font-size:.85rem;color:var(--text-muted)">
+          Subtotal: <span id="subtotalDisplay"></span> &nbsp;|&nbsp; Descuento: <span id="descuentoDisplay"
+            style="color:var(--success)"></span> &nbsp;|&nbsp;
+        </span>
+        Total: <strong id="totalDisplay">$0</strong>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg">Guardar cambios →</button>
+    </div>
+  </div>
+</form>
+
+<script>
+  const CLIENTES = [{% for c in clientes %}{ id: { { c.id } }, nombre: { { c.nombre | tojson } }, tel: { { (c.telefono or '')| tojson } } }, {% endfor %}];
+
+  function toggleMixto(val) {
+    document.getElementById('panelMixto').style.display = val === 'mixto' ? 'block' : 'none';
+  }
+
+  function calcularMixto() {
+    const montos = document.querySelectorAll('#panelMixto input[name="pago_monto"]');
+    let suma = 0;
+    montos.forEach(m => { suma += parseFloat(m.value) || 0; });
+    const total = parseFloat(document.getElementById('totalDisplay').textContent.replace(/[^0-9.-]/g, '')) || 0;
+    const aviso = document.getElementById('avisoMixto');
+    const diff = Math.round((total - suma) * 100) / 100;
+    if (Math.abs(diff) < 0.01) {
+      aviso.style.color = '#10b981';
+      aviso.textContent = '✓ Los montos coinciden con el total';
+    } else if (diff > 0) {
+      aviso.style.color = '#f59e0b';
+      aviso.textContent = `Falta: $${diff.toLocaleString('es-AR')}`;
+    } else {
+      aviso.style.color = '#ef4444';
+      aviso.textContent = `Excede por: $${Math.abs(diff).toLocaleString('es-AR')}`;
+    }
+  }
+
+  function recalcularTotal() {
+    let subtotal = 0;
+    document.querySelectorAll('.input-precio-item').forEach(i => {
+      subtotal += parseFloat(i.value) || 0;
+    });
+    const tipo = document.querySelector('input[name="descuento_tipo"]:checked')?.value || 'pesos';
+    const dVal = parseFloat(document.getElementById('descuentoValor')?.value) || 0;
+    let desc = tipo === 'porcentaje' ? subtotal * dVal / 100 : dVal;
+    desc = Math.max(0, Math.min(desc, subtotal));
+    const total = subtotal - desc;
+    document.getElementById('subtotalDisplay').textContent = '$' + subtotal.toLocaleString('es-AR');
+    document.getElementById('descuentoDisplay').textContent = desc > 0 ? '-$' + desc.toLocaleString('es-AR') : '$0';
+    document.getElementById('totalDisplay').textContent = '$' + total.toLocaleString('es-AR');
+  }
+
+  function recalcularDescuento() { recalcularTotal(); }
+
+  function agregarItem(nombre, precio, id) {
+    const tbody = document.getElementById('itemsTbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+    <td>${nombre}
+      <input type="hidden" name="item_nombre" value="${nombre}">
+      <input type="hidden" name="item_servicio_id" value="${id}">
+    </td>
+    <td><input type="number" name="item_precio" value="${precio}" min="0" step="1" class="input-precio-item" oninput="recalcularTotal()"></td>
+    <td><button type="button" onclick="eliminarFila(this)" class="btn btn-sm btn-danger-ghost">✕</button></td>
+  `;
+    tbody.appendChild(tr);
+    recalcularTotal();
+  }
+
+  function eliminarFila(btn) {
+    btn.closest('tr').remove();
+    recalcularTotal();
+  }
+
+  // Calcular al cargar
+  recalcularTotal();
+</script>
+{% endblock extra_js %}
+{% block extra_js %}
+<script src="/static/js/venta.js"></script>{% endblock %}

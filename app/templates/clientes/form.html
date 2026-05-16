@@ -12,6 +12,8 @@
 {% block content %}
 <div class="form-container">
   <form method="post" class="form-card">
+
+    <!-- Info básica -->
     <div class="form-group">
       <label for="nombre">Nombre completo *</label>
       <input type="text" id="nombre" name="nombre" required
@@ -20,7 +22,7 @@
 
     <div class="form-row">
       <div class="form-group">
-        <label for="telefono">Teléfono</label>
+        <label for="telefono">Teléfono / WhatsApp</label>
         <input type="tel" id="telefono" name="telefono"
                value="{{ cliente.telefono if cliente else '' }}" placeholder="11-1234-5678">
       </div>
@@ -32,8 +34,46 @@
     </div>
 
     <div class="form-group">
-      <label for="notas">Notas (alergias, preferencias, etc.)</label>
-      <textarea id="notas" name="notas" rows="3" placeholder="Ej: Alérgica al formaldehído. Prefiere colores nude.">{{ cliente.notas if cliente else '' }}</textarea>
+      <label for="notas">Notas generales</label>
+      <textarea id="notas" name="notas" rows="2" placeholder="Observaciones, recordatorios...">{{ cliente.notas if cliente else '' }}</textarea>
+    </div>
+
+    <!-- Sección: Ficha técnica -->
+    <div style="margin:.75rem 0 .5rem;font-weight:600;font-size:.88rem;color:var(--primary);border-top:1px solid var(--border);padding-top:.75rem;">
+      💅 Ficha técnica
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="tipo_una">Tipo de uña</label>
+        <select id="tipo_una" name="tipo_una" class="form-control">
+          <option value="">— Sin definir —</option>
+          {% for op in ['Natural', 'Gel', 'Acrílico', 'Fibra de vidrio', 'Polygel'] %}
+          <option value="{{ op }}" {% if cliente and cliente.tipo_una == op %}selected{% endif %}>{{ op }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="color_favorito">Color/estilo favorito</label>
+        <input type="text" id="color_favorito" name="color_favorito"
+               value="{{ cliente.color_favorito if cliente else '' }}"
+               placeholder="Ej: Nude, french, colores pasteles...">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="alergias">Alergias / Sensibilidades</label>
+        <input type="text" id="alergias" name="alergias"
+               value="{{ cliente.alergias if cliente else '' }}"
+               placeholder="Ej: Alérgica al formaldehído...">
+      </div>
+      <div class="form-group">
+        <label for="preferencias">Preferencias de servicio</label>
+        <input type="text" id="preferencias" name="preferencias"
+               value="{{ cliente.preferencias if cliente else '' }}"
+               placeholder="Ej: Prefiere diseños sencillos, sin lima eléctrica...">
+      </div>
     </div>
 
     <div class="form-actions">

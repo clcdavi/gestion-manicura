@@ -10,74 +10,173 @@
 {% endblock %}
 
 {% block content %}
+{% if flash_msg %}<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>{% endif %}
+
 <div class="two-col">
-  <!-- Info del cliente -->
-  <div class="panel">
-    <div class="cliente-header">
-      <div class="cliente-avatar-lg">{{ cliente.nombre[0] if cliente.nombre else "?" }}</div>
-      <div>
-        <h2>{{ cliente.nombre }}</h2>
-        {% if cliente.telefono %}
-        <p>📞 {{ cliente.telefono }}</p>
+  <!-- ── Panel izquierdo: datos del cliente ── -->
+  <div>
+    <div class="panel">
+      <div class="cliente-header">
+        <div class="cliente-avatar-lg">{{ cliente.nombre[0] if cliente.nombre else "?" }}</div>
+        <div>
+          <h2 style="margin:0 0 .2rem;">{{ cliente.nombre }}</h2>
+          {% if cliente.telefono %}
+          <p style="margin:.1rem 0;">
+            <a href="https://wa.me/54{{ cliente.telefono|replace('-','')|replace(' ','') }}" target="_blank"
+               style="color:var(--primary);text-decoration:none;">📞 {{ cliente.telefono }}</a>
+          </p>
+          {% endif %}
+          {% if cliente.fecha_nacimiento %}
+          <p style="margin:.1rem 0;">🎂 {{ cliente.fecha_nacimiento.strftime('%d de %B') }}</p>
+          {% endif %}
+          <p class="text-muted" style="font-size:.82rem;margin:.1rem 0;">
+            Cliente desde {{ cliente.created_at.strftime('%B %Y') }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Estadísticas -->
+      <div class="stat-row" style="margin-top:1rem;">
+        <div class="stat-item">
+          <div class="stat-value">{{ ventas | length }}</div>
+          <div class="stat-label">visitas</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ total_gastado | pesos }}</div>
+          <div class="stat-label">total gastado</div>
+        </div>
+        {% if dias_sin_visitar is not none %}
+        <div class="stat-item">
+          <div class="stat-value" style="color:{% if dias_sin_visitar > 60 %}var(--danger,#ef4444){% elif dias_sin_visitar > 30 %}#f59e0b{% else %}#10b981{% endif %};">{{ dias_sin_visitar }}</div>
+          <div class="stat-label">días sin visitar</div>
+        </div>
         {% endif %}
-        {% if cliente.fecha_nacimiento %}
-        <p>🎂 {{ cliente.fecha_nacimiento.strftime('%d de %B') }}</p>
+      </div>
+
+      <!-- Fidelización -->
+      {% if visitas_para_beneficio %}
+      <div style="margin-top:1rem;padding:.75rem;background:var(--bg-secondary);border-radius:8px;">
+        {% if cliente.beneficio_disponible %}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;">
+          <span style="font-weight:600;color:#10b981;">🎁 Beneficio de fidelidad disponible!</span>
+          <form action="/clientes/{{ cliente.id }}/reset-beneficio" method="post" style="display:inline;">
+            <button type="submit" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;">✓ Marcar como usado</button>
+          </form>
+        </div>
+        {% else %}
+        <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.4rem;">
+          💜 Fidelidad: {{ progreso_fidelidad }} / {{ visitas_para_beneficio }} visitas para próximo beneficio
+        </div>
+        <div style="background:var(--border);border-radius:8px;height:8px;overflow:hidden;">
+          <div style="height:100%;width:{{ pct_fidelidad }}%;background:var(--primary);border-radius:8px;transition:width .5s;"></div>
+        </div>
         {% endif %}
-        <p class="text-muted">Cliente desde {{ cliente.created_at.strftime('%B %Y') }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Servicios favoritos -->
+      {% if servicios_favoritos %}
+      <div style="margin-top:1rem;">
+        <div style="font-size:.8rem;font-weight:600;color:var(--text-muted);margin-bottom:.4rem;">Servicios más pedidos</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;">
+          {% for nombre, cant in servicios_favoritos %}
+          <span style="font-size:.75rem;padding:.15rem .5rem;border-radius:12px;background:var(--bg-secondary);color:var(--text);">
+            {{ nombre }} <span style="color:var(--primary);">×{{ cant }}</span>
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="form-actions" style="margin-top:1rem;">
+        <a href="/clientes/{{ cliente.id }}/editar" class="btn btn-outline">✏️ Editar</a>
+        <a href="/ventas/nueva?cliente_id={{ cliente.id }}" class="btn btn-primary">+ Nueva venta</a>
+        <a href="/turnos/nuevo?cliente_id={{ cliente.id }}" class="btn btn-ghost">📅 Nuevo turno</a>
       </div>
     </div>
 
-    {% if cliente.notas %}
-    <div class="nota-box">
-      <strong>Notas:</strong> {{ cliente.notas }}
+    <!-- Ficha técnica -->
+    {% if cliente.tipo_una or cliente.color_favorito or cliente.alergias or cliente.preferencias %}
+    <div class="panel" style="margin-top:1rem;">
+      <h4 style="margin:0 0 .75rem;font-size:.95rem;">💅 Ficha Técnica</h4>
+      <table style="width:100%;font-size:.85rem;border-collapse:collapse;">
+        {% if cliente.tipo_una %}
+        <tr>
+          <td style="padding:.3rem 0;color:var(--text-muted);width:40%;">Tipo de uña</td>
+          <td style="padding:.3rem 0;font-weight:500;">{{ cliente.tipo_una }}</td>
+        </tr>
+        {% endif %}
+        {% if cliente.color_favorito %}
+        <tr>
+          <td style="padding:.3rem 0;color:var(--text-muted);">Color favorito</td>
+          <td style="padding:.3rem 0;">{{ cliente.color_favorito }}</td>
+        </tr>
+        {% endif %}
+        {% if cliente.alergias %}
+        <tr>
+          <td style="padding:.3rem 0;color:var(--text-muted);">Alergias</td>
+          <td style="padding:.3rem 0;color:var(--danger,#ef4444);">⚠️ {{ cliente.alergias }}</td>
+        </tr>
+        {% endif %}
+        {% if cliente.preferencias %}
+        <tr>
+          <td style="padding:.3rem 0;color:var(--text-muted);">Preferencias</td>
+          <td style="padding:.3rem 0;">{{ cliente.preferencias }}</td>
+        </tr>
+        {% endif %}
+      </table>
     </div>
     {% endif %}
 
-    <div class="stat-row">
-      <div class="stat-item">
-        <div class="stat-value">{{ ventas | length }}</div>
-        <div class="stat-label">visitas</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value">{{ total_gastado | pesos }}</div>
-        <div class="stat-label">total gastado</div>
-      </div>
+    <!-- Notas -->
+    {% if cliente.notas %}
+    <div class="panel nota-box" style="margin-top:1rem;">
+      <strong>📝 Notas:</strong> {{ cliente.notas }}
     </div>
+    {% endif %}
 
-    <div class="form-actions" style="margin-top:1rem">
-      <a href="/clientes/{{ cliente.id }}/editar" class="btn btn-outline">Editar</a>
-      <form method="post" action="/clientes/{{ cliente.id }}/eliminar" id="formEliminarClienteDetalle">
-        <button type="button" class="btn btn-danger"
-                data-form="formEliminarClienteDetalle" data-msg="¿Eliminar a {{ cliente.nombre }}?"
-                onclick="confirmAndDelete(this.dataset.form, this.dataset.msg)">Eliminar</button>
-      </form>
+    <!-- Próximos turnos -->
+    {% if turnos_proximos %}
+    <div class="panel" style="margin-top:1rem;">
+      <h4 style="margin:0 0 .75rem;font-size:.95rem;">📅 Próximos turnos</h4>
+      {% for t in turnos_proximos %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.85rem;">
+        <span>{{ t.fecha_hora_inicio|ar_fecha_hora }}</span>
+        <span style="color:var(--text-muted);">{{ t.servicios_nombres }}</span>
+        <a href="/turnos/{{ t.id }}/editar" style="color:var(--primary);font-size:.75rem;">Ver →</a>
+      </div>
+      {% endfor %}
     </div>
+    {% endif %}
   </div>
 
-  <!-- Historial de ventas -->
+  <!-- ── Panel derecho: historial ── -->
   <div class="panel">
     <h3>Historial de servicios</h3>
     {% if ventas %}
     <div class="historial-list">
       {% for venta in ventas %}
       <div class="historial-item">
-        <div class="historial-fecha">{{ venta.fecha_hora.strftime('%d/%m/%Y') }}</div>
+        <div class="historial-fecha">{{ venta.fecha_hora|ar_fecha if venta.fecha_hora else '' }}</div>
         <div class="historial-servicios">
           {% for item in venta.items %}
           <span class="tag">{{ item.nombre_servicio }}</span>
           {% endfor %}
         </div>
-        <div class="historial-total">{{ venta.total | pesos }}</div>
-        <div class="historial-pago badge-pago badge-pago-{{ venta.forma_pago }}">{{ venta.forma_pago }}</div>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <div class="historial-total">{{ venta.total | pesos }}</div>
+          {% if venta.descuento and venta.descuento > 0 %}
+          <div style="font-size:.72rem;color:#10b981;">-{{ venta.descuento|pesos }}</div>
+          {% endif %}
+          <div class="historial-pago badge-pago badge-pago-{{ venta.forma_pago }}">{{ venta.forma_pago }}</div>
+          <a href="/ventas/{{ venta.id }}/editar" style="color:var(--text-muted);font-size:.75rem;">✏️</a>
+        </div>
       </div>
       {% endfor %}
     </div>
     {% else %}
     <p class="empty-msg">Aún no hay servicios registrados.</p>
     {% endif %}
-    <div style="margin-top:1rem">
-      <a href="/ventas/nueva?cliente_id={{ cliente.id }}" class="btn btn-primary btn-sm">+ Nueva venta para esta cliente</a>
-    </div>
   </div>
 </div>
 {% endblock %}

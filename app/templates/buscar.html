@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Búsqueda{% endblock %}
+{% block header_title %}🔍 Resultados de búsqueda{% endblock %}
+{% block content %}
+
+<form method="get" action="/buscar" style="display:flex;gap:.5rem;margin-bottom:1.25rem;">
+  <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar clientes, servicios, productos..." autofocus style="flex:1;">
+  <button type="submit" class="btn btn-primary">Buscar</button>
+</form>
+
+{% if resultados is none %}
+<p class="text-muted" style="text-align:center;padding:2rem 0;">Ingresá al menos 2 caracteres para buscar.</p>
+{% elif not resultados.clientes and not resultados.servicios and not resultados.productos and not resultados.ventas %}
+<div class="empty-state">
+  <div style="font-size:2.5rem;">🔍</div>
+  <p>No se encontraron resultados para "<strong>{{ q }}</strong>"</p>
+</div>
+{% else %}
+
+{% if resultados.clientes %}
+<div class="card" style="margin-bottom:1rem;">
+  <h4 style="margin:0 0 .75rem;font-size:.95rem;">👤 Clientes ({{ resultados.clientes|length }})</h4>
+  <div style="display:flex;flex-direction:column;gap:.4rem;">
+    {% for c in resultados.clientes %}
+    <a href="/clientes/{{ c.id }}" style="display:flex;justify-content:space-between;padding:.45rem .6rem;border-radius:8px;text-decoration:none;color:var(--text);background:var(--bg-secondary);">
+      <span>{{ c.nombre }}</span>
+      <span style="color:var(--text-muted);font-size:.82rem;">{{ c.telefono or '' }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if resultados.servicios %}
+<div class="card" style="margin-bottom:1rem;">
+  <h4 style="margin:0 0 .75rem;font-size:.95rem;">✂️ Servicios ({{ resultados.servicios|length }})</h4>
+  <div style="display:flex;flex-direction:column;gap:.4rem;">
+    {% for s in resultados.servicios %}
+    <a href="/servicios" style="display:flex;justify-content:space-between;padding:.45rem .6rem;border-radius:8px;text-decoration:none;color:var(--text);background:var(--bg-secondary);">
+      <span>{{ s.nombre }}</span>
+      <span style="color:var(--primary);font-weight:600;">{{ s.precio|pesos }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if resultados.productos %}
+<div class="card" style="margin-bottom:1rem;">
+  <h4 style="margin:0 0 .75rem;font-size:.95rem;">📦 Productos en stock ({{ resultados.productos|length }})</h4>
+  <div style="display:flex;flex-direction:column;gap:.4rem;">
+    {% for p in resultados.productos %}
+    <a href="/stock/{{ p.id }}" style="display:flex;justify-content:space-between;padding:.45rem .6rem;border-radius:8px;text-decoration:none;color:var(--text);background:var(--bg-secondary);">
+      <span>{{ p.nombre }}</span>
+      <span style="color:{% if p.cantidad_actual <= p.cantidad_minima %}var(--danger,#ef4444){% else %}var(--text-muted){% endif %};font-size:.82rem;">
+        Stock: {{ p.cantidad_actual }} {{ p.unidad }}
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if resultados.ventas %}
+<div class="card" style="margin-bottom:1rem;">
+  <h4 style="margin:0 0 .75rem;font-size:.95rem;">💰 Ventas</h4>
+  {% for v in resultados.ventas %}
+  <div style="padding:.45rem .6rem;border-radius:8px;background:var(--bg-secondary);">
+    <strong>Venta #{{ v.id }}</strong> — {{ v.fecha_hora|ar_fecha_hora }} — {{ v.total|pesos }}
+    {% if v.cliente %} — {{ v.cliente.nombre }}{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

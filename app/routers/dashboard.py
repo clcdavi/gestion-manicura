@@ -161,6 +161,70 @@ def dashboard(
         models.ProductoStock.cantidad_actual <= models.ProductoStock.cantidad_minima
     ).count()
 
+    # ── Turnos de hoy ─────────────────────────────────────────────────────────
+    turnos_hoy = []
+    try:
+        turnos_hoy = (
+            db.query(models.Turno)
+            .filter(
+                models.Turno.fecha_hora_inicio >= inicio_hoy,
+                models.Turno.fecha_hora_inicio < fin_hoy,
+                models.Turno.estado.in_(["pendiente", "confirmado"]),
+            )
+            .order_by(models.Turno.fecha_hora_inicio)
+            .all()
+        )
+    except Exception:
+        pass
+
+    # ── Cumpleaños hoy ────────────────────────────────────────────────────────
+    cumple_hoy = []
+    try:
+        todos_clientes = db.query(models.Cliente).filter(
+            models.Cliente.activo == True,
+            models.Cliente.fecha_nacimiento != None,
+        ).all()
+        cumple_hoy = [
+            c for c in todos_clientes
+            if c.fecha_nacimiento.month == hoy.month and c.fecha_nacimiento.day == hoy.day
+        ]
+    except Exception:
+        pass
+
+    # ── Clientes inactivos (>60 días) ─────────────────────────────────────────
+    inactivos_count = 0
+    try:
+        umbral_inactivos = ahora - timedelta(days=60)
+        sq = (
+            db.query(
+                models.Venta.cliente_id,
+                func.max(models.Venta.fecha_hora).label("ultima")
+            )
+            .group_by(models.Venta.cliente_id)
+            .subquery()
+        )
+        inactivos_count = (
+            db.query(models.Cliente)
+            .join(sq, models.Cliente.id == sq.c.cliente_id)
+            .filter(
+                models.Cliente.activo == True,
+                sq.c.ultima < umbral_inactivos,
+            )
+            .count()
+        )
+    except Exception:
+        pass
+
+    # ── Fidelización — beneficios pendientes ──────────────────────────────────
+    beneficios_pendientes = 0
+    try:
+        beneficios_pendientes = db.query(models.Cliente).filter(
+            models.Cliente.activo == True,
+            models.Cliente.beneficio_disponible == True,
+        ).count()
+    except Exception:
+        pass
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "ingresos_hoy": ingresos_hoy,
@@ -181,4 +245,9 @@ def dashboard(
         "rango": rango,
         "chart_desde": desde or (dia_inicio_chart.isoformat() if rango == "custom" else ""),
         "chart_hasta": hasta or (hoy.isoformat() if rango == "custom" else ""),
+        # Nuevos datos
+        "turnos_hoy": turnos_hoy,
+        "cumple_hoy": cumple_hoy,
+        "inactivos_count": inactivos_count,
+        "beneficios_pendientes": beneficios_pendientes,
     })

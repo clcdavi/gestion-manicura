@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Exportar Datos{% endblock %}
+{% block header_title %}⬇️ Exportar Datos Contables{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start;">
+
+  <!-- Excel completo -->
+  <div class="card">
+    <h3 style="margin:0 0 .5rem;font-size:1rem;">📊 Excel Completo (recomendado)</h3>
+    <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:1rem;">
+      Genera un archivo .xlsx con 5 hojas: Libro de Ventas, Por Forma de Pago, Libro de Egresos, Balance Mensual y Control Monotributo. Ideal para entregar al contador.
+    </p>
+    <form method="get" action="/contabilidad/exportar/excel">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+        <div class="form-group">
+          <label class="form-label">Mes</label>
+          <select name="mes" class="form-control">
+            <option value="">— Rango personalizado —</option>
+            {% for m in range(1,13) %}<option value="{{ m }}" {% if mes_actual==m %}selected{% endif %}>{{ ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m] }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Año</label>
+          <select name="anio" class="form-control">
+            {% for a in range(anio_actual,anio_actual-4,-1) %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Desde (rango)</label>
+          <input type="date" name="desde" class="form-control" value="{{ desde_default }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hasta (rango)</label>
+          <input type="date" name="hasta" class="form-control" value="{{ hasta_default }}">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">⬇️ Descargar Excel (.xlsx)</button>
+    </form>
+  </div>
+
+  <!-- CSVs individuales -->
+  <div class="card">
+    <h3 style="margin:0 0 .5rem;font-size:1rem;">📄 CSVs Individuales</h3>
+    <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:1rem;">Descargá cada sección por separado para importar en tu propia planilla.</p>
+
+    <div style="display:flex;flex-direction:column;gap:.75rem;">
+      <div style="padding:.75rem;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-weight:600;margin-bottom:.4rem;font-size:.9rem;">📥 Libro de Ventas</div>
+        <form method="get" action="/contabilidad/exportar/csv/ventas" style="display:flex;gap:.5rem;align-items:center;">
+          <select name="mes" class="form-control" style="flex:1;padding:.3rem;">
+            {% for m in range(1,13) %}<option value="{{ m }}" {% if mes_actual==m %}selected{% endif %}>{{ ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m] }} {{ anio_actual }}</option>{% endfor %}
+          </select>
+          <input type="hidden" name="anio" value="{{ anio_actual }}">
+          <button type="submit" class="btn btn-ghost" style="padding:.3rem .7rem;">⬇️ CSV</button>
+        </form>
+      </div>
+
+      <div style="padding:.75rem;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-weight:600;margin-bottom:.4rem;font-size:.9rem;">📤 Libro de Egresos</div>
+        <form method="get" action="/contabilidad/exportar/csv/egresos" style="display:flex;gap:.5rem;align-items:center;">
+          <select name="mes" class="form-control" style="flex:1;padding:.3rem;">
+            {% for m in range(1,13) %}<option value="{{ m }}" {% if mes_actual==m %}selected{% endif %}>{{ ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m] }} {{ anio_actual }}</option>{% endfor %}
+          </select>
+          <input type="hidden" name="anio" value="{{ anio_actual }}">
+          <button type="submit" class="btn btn-ghost" style="padding:.3rem .7rem;">⬇️ CSV</button>
+        </form>
+      </div>
+
+      <div style="padding:.75rem;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-weight:600;margin-bottom:.4rem;font-size:.9rem;">📊 Balance Anual</div>
+        <form method="get" action="/contabilidad/exportar/csv/balance" style="display:flex;gap:.5rem;align-items:center;">
+          <select name="anio" class="form-control" style="flex:1;padding:.3rem;">
+            {% for a in range(anio_actual,anio_actual-4,-1) %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+          </select>
+          <button type="submit" class="btn btn-ghost" style="padding:.3rem .7rem;">⬇️ CSV</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:1.25rem;padding:1rem;background:var(--bg-secondary);border-radius:10px;font-size:.83rem;color:var(--text-muted);">
+  <strong>💡 Tip para tu contador:</strong> El Excel completo es la opción más cómoda — incluye todo en un solo archivo listo para auditoría. Los límites de Monotributo incluidos son orientativos; verificar con RG AFIP vigente.
+</div>
+
+<div style="margin-top:1rem;"><a href="/contabilidad" class="btn btn-ghost">← Volver</a></div>
+{% endblock %}

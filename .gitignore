@@ -3,3 +3,10 @@ salon.db.backup_*
 __pycache__/
 *.pyc
 .env
+credentials.json
+client_secret_*.json
+.DS_Store
+**/.DS_Store
+token.json
+venv/
+*.egg-info/

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Libro de Egresos{% endblock %}
+{% block header_title %}📤 Libro de Egresos{% endblock %}
+{% block content %}
+<div class="card" style="margin-bottom:1rem;padding:.75rem 1rem;">
+  <form method="get" action="/contabilidad/egresos" style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;">
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Mes</label>
+      <select name="mes" class="form-control" style="padding:.35rem .6rem;">
+        {% for m in range(1,13) %}<option value="{{ m }}" {% if mes_int==m %}selected{% endif %}>{{ ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Año</label>
+      <select name="anio" class="form-control" style="padding:.35rem .6rem;">
+        {% for a in range(anio_actual,anio_actual-4,-1) %}<option value="{{ a }}" {% if anio_int==a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Categoría</label>
+      <select name="categoria" class="form-control" style="padding:.35rem .6rem;">
+        <option value="">Todas</option>
+        {% for c in categorias %}<option value="{{ c }}" {% if filtro_categoria==c %}selected{% endif %}>{{ c|capitalize }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="padding:.4rem .9rem;">Filtrar</button>
+    <a href="/contabilidad/exportar/csv/egresos?mes={{ mes_int }}&anio={{ anio_int }}" class="btn btn-ghost">⬇️ CSV</a>
+  </form>
+</div>
+
+<div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+  <div class="card" style="padding:.5rem .9rem;flex:1;min-width:140px;text-align:center;">
+    <div style="font-size:.75rem;color:var(--text-muted);">Costos Fijos</div>
+    <div style="font-weight:700;">{{ egresos.total_costos_fijos|pesos }}</div>
+  </div>
+  <div class="card" style="padding:.5rem .9rem;flex:1;min-width:140px;text-align:center;">
+    <div style="font-size:.75rem;color:var(--text-muted);">Compras Insumos</div>
+    <div style="font-weight:700;">{{ egresos.total_compras|pesos }}</div>
+  </div>
+  <div class="card" style="padding:.5rem .9rem;flex:1;min-width:140px;text-align:center;background:var(--danger,#ef4444);color:white;">
+    <div style="font-size:.75rem;opacity:.85;">TOTAL EGRESOS</div>
+    <div style="font-weight:700;">{{ egresos.total|pesos }}</div>
+  </div>
+</div>
+
+{% if egresos.filas %}
+<div class="card" style="padding:0;overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+    <thead>
+      <tr style="background:var(--bg-secondary);">
+        <th style="padding:.55rem .7rem;text-align:left;">Fecha</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Tipo</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Descripción</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Categoría</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Proveedor</th>
+        <th style="padding:.55rem .7rem;text-align:right;">Monto</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in egresos.filas %}
+      <tr style="border-top:1px solid var(--border);">
+        <td style="padding:.5rem .7rem;">{{ f.fecha|ar_fecha if f.fecha else '' }}</td>
+        <td style="padding:.5rem .7rem;">
+          <span style="font-size:.75rem;padding:.15rem .4rem;border-radius:4px;background:{% if f.tipo == 'Costo Fijo' %}#ede9fe;color:#5b21b6{% else %}#fef3c7;color:#92400e{% endif %};">{{ f.tipo }}</span>
+        </td>
+        <td style="padding:.5rem .7rem;">{{ f.descripcion }}</td>
+        <td style="padding:.5rem .7rem;color:var(--text-muted);font-size:.78rem;">{{ f.categoria }}</td>
+        <td style="padding:.5rem .7rem;color:var(--text-muted);font-size:.78rem;">{{ f.proveedor or '—' }}</td>
+        <td style="padding:.5rem .7rem;text-align:right;font-weight:600;color:var(--danger,#ef4444);">{{ f.monto|pesos }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr style="background:var(--danger,#ef4444);color:white;font-weight:700;">
+        <td colspan="5" style="padding:.6rem .7rem;">TOTAL EGRESOS</td>
+        <td style="padding:.6rem .7rem;text-align:right;">{{ egresos.total|pesos }}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><p>No hay egresos registrados en este período.</p></div>
+{% endif %}
+
+<div style="margin-top:1rem;display:flex;gap:.5rem;">
+  <a href="/contabilidad" class="btn btn-ghost">← Volver</a>
+  <a href="/stock/compras" class="btn btn-ghost">📦 Registrar compra de stock</a>
+</div>
+{% endblock %}

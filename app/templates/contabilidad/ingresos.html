@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Libro de Ingresos{% endblock %}
+{% block header_title %}📥 Libro de Ingresos{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1rem;padding:.75rem 1rem;">
+  <form method="get" action="/contabilidad/ingresos" style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;">
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Mes</label>
+      <select name="mes" class="form-control" style="padding:.35rem .6rem;">
+        {% for m in range(1,13) %}
+        <option value="{{ m }}" {% if mes_int == m %}selected{% endif %}>
+          {{ ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m] }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Año</label>
+      <select name="anio" class="form-control" style="padding:.35rem .6rem;">
+        {% for a in range(anio_actual, anio_actual-4, -1) %}
+        <option value="{{ a }}" {% if anio_int == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Forma de pago</label>
+      <select name="forma_pago" class="form-control" style="padding:.35rem .6rem;">
+        <option value="">Todas</option>
+        {% for fp in formas_pago %}
+        <option value="{{ fp }}" {% if filtro_forma_pago == fp %}selected{% endif %}>{{ fp|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="padding:.4rem .9rem;">Filtrar</button>
+    <a href="/contabilidad/exportar/csv/ventas?mes={{ mes_int }}&anio={{ anio_int }}" class="btn btn-ghost" style="padding:.4rem .9rem;">⬇️ CSV</a>
+    <a href="/contabilidad/exportar/excel?mes={{ mes_int }}&anio={{ anio_int }}" class="btn btn-ghost" style="padding:.4rem .9rem;">⬇️ Excel</a>
+  </form>
+</div>
+
+<!-- Totales por método -->
+{% if ingresos.totales_por_metodo %}
+<div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+  {% for metodo, monto in ingresos.totales_por_metodo.items() %}
+  <div class="card" style="padding:.5rem .9rem;flex:1;min-width:120px;text-align:center;">
+    <div style="font-size:.75rem;color:var(--text-muted);">{{ metodo|capitalize }}</div>
+    <div style="font-weight:700;font-size:1.05rem;">{{ monto|pesos }}</div>
+  </div>
+  {% endfor %}
+  <div class="card" style="padding:.5rem .9rem;flex:1;min-width:120px;text-align:center;background:var(--primary);color:white;">
+    <div style="font-size:.75rem;opacity:.85;">TOTAL</div>
+    <div style="font-weight:700;font-size:1.05rem;">{{ ingresos.total|pesos }}</div>
+  </div>
+</div>
+{% endif %}
+
+{% if ingresos.filas %}
+<div class="card" style="padding:0;overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:700px;">
+    <thead>
+      <tr style="background:var(--bg-secondary);">
+        <th style="padding:.55rem .7rem;text-align:left;">N°</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Fecha</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Hora</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Cliente</th>
+        <th style="padding:.55rem .7rem;text-align:left;">Servicios</th>
+        <th style="padding:.55rem .7rem;text-align:right;">Subtotal</th>
+        <th style="padding:.55rem .7rem;text-align:right;">Descuento</th>
+        <th style="padding:.55rem .7rem;text-align:right;">Total</th>
+        <th style="padding:.55rem .7rem;text-align:center;">Pago</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in ingresos.filas %}
+      <tr style="border-top:1px solid var(--border);" {% if loop.index is odd %}style="background:var(--bg-secondary);"{% endif %}>
+        <td style="padding:.5rem .7rem;color:var(--text-muted);">#{{ f.id }}</td>
+        <td style="padding:.5rem .7rem;">{{ f.fecha|ar_fecha if f.fecha else '' }}</td>
+        <td style="padding:.5rem .7rem;color:var(--text-muted);">{{ (f.fecha)|ar_hora if f.fecha else '' }}</td>
+        <td style="padding:.5rem .7rem;">{{ f.cliente }}</td>
+        <td style="padding:.5rem .7rem;color:var(--text-muted);font-size:.78rem;">{{ f.servicios or '—' }}</td>
+        <td style="padding:.5rem .7rem;text-align:right;">{{ f.subtotal|pesos }}</td>
+        <td style="padding:.5rem .7rem;text-align:right;color:{% if f.descuento > 0 %}var(--danger){% else %}var(--text-muted){% endif %};">
+          {% if f.descuento > 0 %}-{{ f.descuento|pesos }}{% else %}—{% endif %}
+        </td>
+        <td style="padding:.5rem .7rem;text-align:right;font-weight:600;">{{ f.total|pesos }}</td>
+        <td style="padding:.5rem .7rem;text-align:center;font-size:.78rem;">{{ f.pagos_detalle }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr style="background:var(--primary);color:white;font-weight:700;">
+        <td colspan="5" style="padding:.6rem .7rem;">TOTAL — {{ ingresos.cantidad_ventas }} venta(s)</td>
+        <td style="padding:.6rem .7rem;text-align:right;">{{ (ingresos.total + ingresos.descuentos_total)|pesos }}</td>
+        <td style="padding:.6rem .7rem;text-align:right;">-{{ ingresos.descuentos_total|pesos }}</td>
+        <td style="padding:.6rem .7rem;text-align:right;">{{ ingresos.total|pesos }}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div style="font-size:2.5rem;">📭</div>
+  <p>No hay ventas registradas en este período.</p>
+</div>
+{% endif %}
+
+<div style="margin-top:1rem;display:flex;gap:.5rem;">
+  <a href="/contabilidad" class="btn btn-ghost">← Volver</a>
+</div>
+{% endblock %}

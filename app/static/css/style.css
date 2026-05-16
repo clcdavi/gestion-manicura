@@ -1074,3 +1074,118 @@ textarea { resize: vertical; }
   border-color: var(--text);
   transform: scale(1.1);
 }
+
+/* ══════════════════════════════════════════════
+   MODO OSCURO
+   Se activa con data-dark="true" en <html>
+   ══════════════════════════════════════════════ */
+:root[data-dark="true"] {
+  --bg:          #0F172A;
+  --surface:     #1E293B;
+  --border:      #334155;
+  --text:        #E2E8F0;
+  --text-muted:  #94A3B8;
+  --shadow:      0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
+
+  --success-bg:  #064E3B;
+  --alert-bg:    #7F1D1D;
+  --warn-bg:     #78350F;
+  --primary-bg:  rgba(91,108,246,0.15);
+
+  --sidebar-bg:  #020617;
+  --sidebar-hover: #1E293B;
+  --sidebar-border: rgba(255,255,255,0.08);
+}
+
+[data-dark="true"] .tabla th { background: #1a2744; }
+[data-dark="true"] .tabla tbody tr:hover td { background: #253350; }
+[data-dark="true"] .tabla tfoot td { background: #1a2744; }
+[data-dark="true"] .card-primary { background: rgba(91,108,246,0.12); }
+[data-dark="true"] .card-alert   { background: rgba(239,68,68,0.12); }
+[data-dark="true"] .card-success { background: rgba(16,185,129,0.12); }
+[data-dark="true"] .row-alert td { background: rgba(239,68,68,0.1) !important; }
+[data-dark="true"] .form-card { background: var(--surface); }
+[data-dark="true"] .breadcrumb { background: var(--surface); }
+[data-dark="true"] .nota-box { background: rgba(245,158,11,0.12); color: #FCD34D; border-color: #92400E; }
+[data-dark="true"] .badge-ok { background: #064E3B; color: #34D399; }
+[data-dark="true"] .badge-alert { background: #7F1D1D; color: #FCA5A5; }
+[data-dark="true"] .badge-warn { background: #78350F; color: #FCD34D; }
+[data-dark="true"] .badge-neutral { background: #1E293B; color: #94A3B8; border-color: #475569; }
+[data-dark="true"] .badge-pago-efectivo { background: #064E3B; color: #34D399; }
+[data-dark="true"] .badge-pago-transferencia { background: #1E3A5F; color: #93C5FD; }
+[data-dark="true"] .badge-pago-tarjeta { background: #2E1065; color: #C4B5FD; }
+[data-dark="true"] .badge-pago-mixto { background: #78350F; color: #FCD34D; }
+[data-dark="true"] .tag { background: rgba(91,108,246,0.15); color: #A5B4FC; }
+[data-dark="true"] .alerta-banner { background: rgba(239,68,68,0.12); border-color: #991B1B; color: #FCA5A5; }
+[data-dark="true"] .alerta-banner.alerta-warn { background: rgba(245,158,11,0.12); border-color: #92400E; color: #FCD34D; }
+[data-dark="true"] .cliente-top-card { background: rgba(91,108,246,0.08); border-color: rgba(91,108,246,0.2); }
+[data-dark="true"] .catalogo-btn { background: #1E293B; border-color: #334155; }
+[data-dark="true"] .catalogo-btn:hover { background: rgba(91,108,246,0.1); }
+[data-dark="true"] .pago-option { background: var(--surface); }
+[data-dark="true"] .checkbox-item { background: var(--surface); }
+[data-dark="true"] .flash-success { background: #064E3B; color: #34D399; border-color: #065F46; }
+[data-dark="true"] .flash-error { background: #7F1D1D; color: #FCA5A5; border-color: #991B1B; }
+[data-dark="true"] .flash-info { background: #1E3A5F; color: #93C5FD; border-color: #1E40AF; }
+[data-dark="true"] .cliente-seleccionado { background: #064E3B; border-color: #065F46; color: #34D399; }
+
+/* Toggle botón oscuro/claro */
+.dark-toggle-btn {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+  margin-right: 0.35rem;
+}
+.dark-toggle-btn:hover {
+  background: var(--bg);
+  border-color: var(--primary);
+}
+
+/* Stat card for contabilidad and turnos */
+.stat-card {
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow);
+}
+.stat-card .stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+.stat-card .stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Bg secondary for dark mode compatible */
+.bg-secondary { background: var(--bg); }
+[data-dark="true"] .bg-secondary { background: #1a2744; }
+
+/* Form control for dark mode */
+[data-dark="true"] input,
+[data-dark="true"] textarea,
+[data-dark="true"] select {
+  background: #0F172A;
+  border-color: #475569;
+  color: var(--text);
+}
+[data-dark="true"] input:focus,
+[data-dark="true"] textarea:focus,
+[data-dark="true"] select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(91,108,246,0.2);
+}
+
+/* Inline CSS var helpers */
+[data-dark="true"] [style*="background:var(--bg-secondary)"],
+[data-dark="true"] [style*="background: var(--bg-secondary)"] {
+  background: #1a2744 !important;
+}

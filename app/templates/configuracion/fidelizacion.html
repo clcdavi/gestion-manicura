@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Configurar Fidelización{% endblock %}
+{% block header_title %}💜 Programa de Fidelización{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb">
+  <a href="/">Dashboard</a>
+  <span class="bc-sep">/</span>
+  <span class="bc-current">Fidelización</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+{% if flash_msg %}<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>{% endif %}
+
+<div class="form-container">
+  <form method="post" class="form-card">
+    <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:1.25rem;">
+      Cuando una cliente alcance el número de visitas configurado, el sistema le activará
+      automáticamente un beneficio que podrás aplicar en su próxima atención.
+    </p>
+
+    <!-- Activar / desactivar -->
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;padding:.75rem;background:var(--bg);border-radius:8px;">
+      <input type="checkbox" name="activo" value="1" id="chkActivo"
+             style="width:18px;height:18px;accent-color:var(--primary);"
+             {% if cfg.activo %}checked{% endif %}>
+      <label for="chkActivo" style="font-weight:600;cursor:pointer;">
+        Programa de fidelización activo
+      </label>
+    </div>
+
+    <!-- Visitas -->
+    <div class="form-group">
+      <label for="visitas">Visitas necesarias para obtener el beneficio</label>
+      <input type="number" id="visitas" name="visitas_para_beneficio" min="1" max="100"
+             value="{{ cfg.visitas_para_beneficio }}" style="max-width:150px;">
+      <span class="form-hint">Cada vez que una cliente acumule esta cantidad de visitas, se le activará el beneficio.</span>
+    </div>
+
+    <!-- Tipo de beneficio -->
+    <div class="form-group">
+      <label>Tipo de beneficio</label>
+      <div class="pago-options" style="margin-top:.35rem;">
+        <label class="pago-option">
+          <input type="radio" name="tipo_beneficio" value="descuento_pct"
+                 {% if cfg.tipo_beneficio == 'descuento_pct' %}checked{% endif %}>
+          <span>% Descuento porcentual</span>
+        </label>
+        <label class="pago-option">
+          <input type="radio" name="tipo_beneficio" value="servicio_gratis"
+                 {% if cfg.tipo_beneficio == 'servicio_gratis' %}checked{% endif %}>
+          <span>🎁 Servicio gratis</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Valor -->
+    <div class="form-group">
+      <label for="valor">Valor del beneficio</label>
+      <input type="number" id="valor" name="valor_beneficio" min="0" step="1"
+             value="{{ cfg.valor_beneficio|int }}" style="max-width:150px;">
+      <span class="form-hint">
+        Si es descuento: porcentaje (ej: 10 = 10%).<br>
+        Si es servicio gratis: podés poner 100 (100% de descuento en un servicio).
+      </span>
+    </div>
+
+    <!-- Ejemplo -->
+    <div style="background:var(--primary-bg);border:1px solid var(--primary);border-radius:8px;padding:.75rem 1rem;margin:1rem 0;font-size:.85rem;">
+      <strong>Ejemplo:</strong> Con la configuración actual, después de
+      <strong>{{ cfg.visitas_para_beneficio }}</strong> visita(s), cada cliente recibe
+      {% if cfg.tipo_beneficio == 'descuento_pct' %}
+      un <strong>{{ cfg.valor_beneficio|int }}% de descuento</strong> en su próximo servicio.
+      {% else %}
+      un <strong>servicio gratis</strong> (valor del beneficio: {{ cfg.valor_beneficio|int }}%).
+      {% endif %}
+    </div>
+
+    <div class="form-actions">
+      <a href="/" class="btn btn-ghost">← Volver al dashboard</a>
+      <button type="submit" class="btn btn-primary">💾 Guardar configuración</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

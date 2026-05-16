@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Contabilidad{% endblock %}
+{% block header_title %}📊 Contabilidad{% endblock %}
+
+{% block content %}
+{% if flash_msg %}<div class="flash flash-{{ flash_type }}">{{ flash_msg }}</div>{% endif %}
+
+<!-- Filtro de período -->
+<div class="card" style="margin-bottom:1.25rem;padding:.75rem 1rem;">
+  <form method="get" action="/contabilidad" style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;">
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Mes rápido</label>
+      <select name="mes" class="form-control" style="padding:.35rem .6rem;" onchange="this.form.submit()">
+        {% for m in range(1,13) %}
+        <option value="{{ m }}" {% if mes_int == m %}selected{% endif %}>
+          {{ ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m] }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Año</label>
+      <select name="anio" class="form-control" style="padding:.35rem .6rem;" onchange="this.form.submit()">
+        {% for a in range(anio_actual, anio_actual-4, -1) %}
+        <option value="{{ a }}" {% if anio_int == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <span style="color:var(--text-muted);padding:.4rem 0;">o</span>
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Desde</label>
+      <input type="date" name="desde" class="form-control" style="padding:.35rem .6rem;"
+             value="{{ desde.strftime('%Y-%m-%d') if desde else '' }}">
+    </div>
+    <div>
+      <label class="form-label" style="font-size:.78rem;">Hasta</label>
+      <input type="date" name="hasta" class="form-control" style="padding:.35rem .6rem;"
+             value="{{ hasta.strftime('%Y-%m-%d') if hasta else '' }}">
+    </div>
+    <button type="submit" class="btn btn-primary" style="padding:.4rem 1rem;">Aplicar</button>
+  </form>
+</div>
+
+<!-- KPIs principales -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem;">
+  <div class="stat-card" style="background:linear-gradient(135deg,#10b981,#059669);color:white;">
+    <div class="stat-label" style="color:rgba(255,255,255,.8);">💰 Ingresos</div>
+    <div class="stat-value">{{ ingresos.total|pesos }}</div>
+    <div style="font-size:.78rem;opacity:.85;">{{ ingresos.cantidad_ventas }} ventas</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;">
+    <div class="stat-label" style="color:rgba(255,255,255,.8);">📉 Egresos</div>
+    <div class="stat-value">{{ egresos.total|pesos }}</div>
+    <div style="font-size:.78rem;opacity:.85;">costos fijos + compras</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,{% if resultado >= 0 %}#5b6cf6,#4f46e5{% else %}#f59e0b,#d97706{% endif %});color:white;">
+    <div class="stat-label" style="color:rgba(255,255,255,.8);">📈 Resultado Neto</div>
+    <div class="stat-value">{{ resultado|pesos }}</div>
+    <div style="font-size:.78rem;opacity:.85;">Margen: {{ margen_pct }}%</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">🏷️ Categoría Monotributo</div>
+    <div class="stat-value" style="font-size:1.6rem;">{{ monotributo.categoria_actual }}</div>
+    <div style="font-size:.78rem;color:var(--text-muted);">{{ monotributo.pct_limite_actual }}% del límite</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:1.25rem;align-items:start;">
+
+  <!-- Gráfico ingresos vs egresos -->
+  <div class="card">
+    <h3 style="margin:0 0 1rem;font-size:1rem;">Ingresos vs Egresos — últimos 6 meses</h3>
+    <canvas id="chartBalance" height="180"></canvas>
+  </div>
+
+  <!-- Monotributo widget -->
+  <div class="card">
+    <h3 style="margin:0 0 .75rem;font-size:1rem;">🏷️ Control Monotributo</h3>
+    <div style="margin-bottom:.5rem;font-size:.82rem;color:var(--text-muted);">
+      Facturación últimos 12 meses
+    </div>
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:.4rem;">
+      {{ monotributo.facturacion_12m|pesos }}
+    </div>
+    <!-- Barra de progreso -->
+    <div style="background:var(--bg-secondary);border-radius:8px;height:10px;overflow:hidden;margin-bottom:.4rem;">
+      <div style="height:100%;width:{{ [monotributo.pct_limite_actual, 100]|min }}%;
+                  background: {% if monotributo.pct_limite_actual > 90 %}#ef4444{% elif monotributo.pct_limite_actual > 75 %}#f59e0b{% else %}#10b981{% endif %};
+                  border-radius:8px;transition:width .5s;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted);">
+      <span>Cat. {{ monotributo.categoria_actual }}</span>
+      <span>Límite: {{ monotributo.limite_actual|pesos }}</span>
+    </div>
+    {% if monotributo.meses_hasta_limite %}
+    <div style="margin-top:.6rem;padding:.4rem .6rem;background:{% if monotributo.meses_hasta_limite < 3 %}#fee2e2{% else %}#f0fdf4{% endif %};border-radius:6px;font-size:.78rem;">
+      ⚠️ Al ritmo actual: <strong>~{{ monotributo.meses_hasta_limite }} meses</strong> hasta límite sig. (cat. {{ monotributo.categoria_siguiente }})
+    </div>
+    {% endif %}
+    <a href="/contabilidad/monotributo" class="btn btn-ghost" style="font-size:.78rem;margin-top:.75rem;padding:.3rem .6rem;display:inline-block;">Ver detalle →</a>
+  </div>
+</div>
+
+<!-- Links de navegación -->
+<div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1.25rem;">
+  <a href="/contabilidad/ingresos?mes={{ mes_int }}&anio={{ anio_int }}" class="btn btn-ghost">📥 Libro de Ingresos</a>
+  <a href="/contabilidad/egresos?mes={{ mes_int }}&anio={{ anio_int }}" class="btn btn-ghost">📤 Libro de Egresos</a>
+  <a href="/contabilidad/balance?anio={{ anio_int }}" class="btn btn-ghost">📊 Balance Anual</a>
+  <a href="/contabilidad/exportar" class="btn btn-primary">⬇️ Exportar</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  const labels = {{ meses_grafico | map(attribute='label') | list | tojson }};
+  const ingresos = {{ meses_grafico | map(attribute='ingresos') | list | tojson }};
+  const egresos  = {{ meses_grafico | map(attribute='egresos')  | list | tojson }};
+
+  const ctx = document.getElementById('chartBalance').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Ingresos', data: ingresos, backgroundColor: '#10b981', borderRadius: 6 },
+        { label: 'Egresos',  data: egresos,  backgroundColor: '#ef4444', borderRadius: 6 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' $' + ctx.raw.toLocaleString('es-AR')
+          }
+        }
+      },
+      scales: {
+        y: { ticks: { callback: v => '$' + v.toLocaleString('es-AR') } }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

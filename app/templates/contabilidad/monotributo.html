@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Control Monotributo{% endblock %}
+{% block header_title %}🏷️ Control Monotributo{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start;">
+
+  <div class="card">
+    <h3 style="margin:0 0 1rem;font-size:1rem;">Situación actual</h3>
+    <table style="width:100%;font-size:.88rem;border-collapse:collapse;">
+      <tr><td style="padding:.4rem 0;color:var(--text-muted);">Facturación 12 meses</td><td style="text-align:right;font-weight:700;font-size:1.05rem;">{{ mono.facturacion_12m|pesos }}</td></tr>
+      <tr><td style="padding:.4rem 0;color:var(--text-muted);">Categoría actual</td><td style="text-align:right;font-weight:700;font-size:1.3rem;color:var(--primary);">{{ mono.categoria_actual }}</td></tr>
+      <tr><td style="padding:.4rem 0;color:var(--text-muted);">Límite categoría</td><td style="text-align:right;">{{ mono.limite_actual|pesos }}</td></tr>
+      <tr><td style="padding:.4rem 0;color:var(--text-muted);">% del límite usado</td>
+        <td style="text-align:right;">
+          <span style="font-weight:700;color:{% if mono.pct_limite_actual > 90 %}#ef4444{% elif mono.pct_limite_actual > 75 %}#f59e0b{% else %}#10b981{% endif %};">{{ mono.pct_limite_actual }}%</span>
+        </td>
+      </tr>
+      <tr><td style="padding:.4rem 0;color:var(--text-muted);">Promedio mensual (últ. 3m)</td><td style="text-align:right;">{{ mono.promedio_mensual|pesos }}</td></tr>
+      {% if mono.categoria_siguiente %}
+      <tr><td style="padding:.4rem 0;color:var(--text-muted);">Próxima categoría</td><td style="text-align:right;font-weight:600;">{{ mono.categoria_siguiente }} ({{ mono.limite_siguiente|pesos }})</td></tr>
+      <tr><td style="padding:.4rem 0;color:var(--text-muted);">Meses est. hasta siguiente</td>
+        <td style="text-align:right;font-weight:700;color:{% if mono.meses_hasta_limite and mono.meses_hasta_limite < 3 %}#ef4444{% else %}#10b981{% endif %};">
+          {{ mono.meses_hasta_limite if mono.meses_hasta_limite is not none else 'N/A' }} meses
+        </td>
+      </tr>
+      {% endif %}
+    </table>
+
+    <!-- Barra de progreso -->
+    <div style="margin-top:1.25rem;">
+      <div style="background:var(--bg-secondary);border-radius:10px;height:14px;overflow:hidden;">
+        <div style="height:100%;width:{{ [mono.pct_limite_actual,100]|min }}%;
+                    background:{% if mono.pct_limite_actual > 90 %}#ef4444{% elif mono.pct_limite_actual > 75 %}#f59e0b{% else %}#10b981{% endif %};
+                    border-radius:10px;transition:width .6s;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.73rem;color:var(--text-muted);margin-top:.3rem;">
+        <span>$0</span>
+        <span>{{ mono.pct_limite_actual }}% del límite</span>
+        <span>{{ mono.limite_actual|pesos }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de categorías -->
+  <div class="card">
+    <h3 style="margin:0 0 1rem;font-size:1rem;">Límites de categorías</h3>
+    <table style="width:100%;font-size:.83rem;border-collapse:collapse;">
+      <thead><tr style="background:var(--bg-secondary);">
+        <th style="padding:.45rem .6rem;text-align:left;">Cat.</th>
+        <th style="padding:.45rem .6rem;text-align:right;">Límite anual</th>
+        <th style="padding:.45rem .6rem;text-align:center;">Estado</th>
+      </tr></thead>
+      <tbody>
+        {% for cat, lim in mono.limites.items() %}
+        <tr style="border-top:1px solid var(--border);{% if cat == mono.categoria_actual %}background:rgba(91,108,246,.08);font-weight:700;{% endif %}">
+          <td style="padding:.45rem .6rem;">Categoría {{ cat }}</td>
+          <td style="padding:.45rem .6rem;text-align:right;">{{ lim|pesos }}</td>
+          <td style="padding:.45rem .6rem;text-align:center;font-size:.72rem;">
+            {% if cat == mono.categoria_actual %}
+            <span style="background:var(--primary);color:white;padding:.15rem .5rem;border-radius:12px;">Actual</span>
+            {% elif mono.facturacion_12m > lim %}
+            <span style="color:var(--text-muted);">✓ Superada</span>
+            {% else %}
+            <span style="color:#10b981;">Disponible</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p style="font-size:.72rem;color:var(--text-muted);margin-top:.75rem;">* Límites orientativos. Verificar RG AFIP vigente con tu contador.</p>
+  </div>
+</div>
+
+<!-- Historial mensual -->
+<div class="card" style="margin-top:1.25rem;">
+  <h3 style="margin:0 0 .75rem;font-size:1rem;">Facturación mensual — últimos 12 meses</h3>
+  <canvas id="chartMono" height="100"></canvas>
+</div>
+
+<div style="margin-top:1rem;"><a href="/contabilidad" class="btn btn-ghost">← Volver</a></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const labels = {{ mono.historial | map(attribute='mes') | list | tojson }};
+const data   = {{ mono.historial | map(attribute='total') | list | tojson }};
+const limite = {{ mono.limite_actual }};
+new Chart(document.getElementById('chartMono'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label: 'Facturación mensual', data, backgroundColor: '#5b6cf6', borderRadius: 6 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ' $' + ctx.raw.toLocaleString('es-AR') } }
+    },
+    scales: {
+      y: { ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
+    }
+  }
+});
+</script>
+{% endblock %}
