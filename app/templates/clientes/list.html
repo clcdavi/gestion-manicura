@@ -43,7 +43,8 @@
 
 {% if clientes %}
 <div class="panel" style="padding:0;overflow:hidden;">
-  <table class="tabla">
+  <div class="table-responsive">
+    <table class="tabla">
     <thead>
       <tr>
         <th>Nombre</th>
@@ -105,6 +106,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 <div style="color:var(--text-muted);font-size:.8rem;margin-top:.5rem;">{{ clientes|length }} cliente(s)</div>
 {% else %}

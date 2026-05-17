@@ -173,6 +173,22 @@ a:hover { color: var(--primary-d); }
   flex: 1;
   color: var(--text-muted);
   letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar-search {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  max-width: 280px;
+  margin: 0 1rem;
+}
+.topbar-search input {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+  height: 32px;
 }
 .topbar-right { color: var(--text-muted); font-size: 0.8rem; }
 .menu-toggle {
@@ -791,10 +807,36 @@ textarea { resize: vertical; }
   .content { padding: 1.25rem; }
 }
 
-@media (max-width: 500px) {
-  .cards-grid  { grid-template-columns: 1fr 1fr; }
-  .form-row    { flex-direction: column; }
-  .content     { padding: 1rem; }
+@media (max-width: 640px) {
+  .topbar { padding: 0 0.75rem; gap: 0.5rem; }
+  .topbar-title { display: none; }
+  .topbar-date { display: none; }
+  .topbar-search {
+    max-width: none;
+    margin: 0;
+    flex: 1;
+  }
+  .cards-grid { grid-template-columns: 1fr; }
+  .two-col { gap: 1rem; }
+}
+
+@media (max-width: 400px) {
+  .cards-grid { grid-template-columns: 1fr; }
+  .content { padding: 0.75rem; }
+  .btn { padding: 0.5rem 1rem; font-size: 0.8rem; }
+}
+
+/* Wrapper para tablas responsivas */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.table-responsive .tabla {
+  border: none;
 }
 
 /* ──────────────────────────────────────────────

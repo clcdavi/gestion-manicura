@@ -92,9 +92,8 @@
       <button class="menu-toggle" onclick="toggleSidebar()">&#9776;</button>
       <div class="topbar-title">{% block header_title %}{% endblock %}</div>
       <!-- Búsqueda global -->
-      <form action="/buscar" method="get" style="display:flex;align-items:center;gap:.35rem;flex:1;max-width:280px;margin:0 1rem;">
+      <form action="/buscar" method="get" class="topbar-search">
         <input type="text" name="q" placeholder="🔍 Buscar..." class="form-control"
-               style="padding:.3rem .6rem;font-size:.82rem;height:32px;"
                value="{{ request.query_params.get('q','') }}">
       </form>
       <div class="topbar-right" style="display:flex;align-items:center;gap:.4rem;">

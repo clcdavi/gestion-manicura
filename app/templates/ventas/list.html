@@ -34,7 +34,8 @@
 
 {% if ventas %}
 <div class="panel">
-  <table class="tabla">
+  <div class="table-responsive">
+    <table class="tabla">
     <thead>
       <tr>
         <th>Hora</th>
@@ -94,6 +95,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% else %}
 <div class="empty-state">

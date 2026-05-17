@@ -47,7 +47,8 @@
 {% if combos %}
 <h2 style="margin-top:2rem">Combos</h2>
 <div class="panel">
-  <table class="tabla">
+  <div class="table-responsive">
+    <table class="tabla">
     <thead>
       <tr><th>Nombre</th><th>Precio</th><th>Incluye</th><th></th></tr>
     </thead>
@@ -73,6 +74,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endif %}
 {% endblock %}

@@ -68,7 +68,8 @@ function toggleCategorias() {
 {% for cat in categorias | sort %}
 <h3 class="categoria-header">{{ cat }}</h3>
 <div class="panel" style="margin-bottom:1rem">
-  <table class="tabla">
+  <div class="table-responsive">
+    <table class="tabla">
     <thead>
       <tr><th>Producto</th><th>Stock actual</th><th>Mínimo</th><th>Costo unit.</th><th>Estado</th><th></th></tr>
     </thead>
@@ -97,7 +98,8 @@ function toggleCategorias() {
       </tr>
       {% endfor %}
     </tbody>
-  </table>
+    </table>
+  </div>
 </div>
 {% endfor %}
 {% else %}
