@@ -10,3 +10,4 @@ client_secret_*.json
 token.json
 venv/
 *.egg-info/
+docker-compose.yml

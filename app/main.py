@@ -13,6 +13,7 @@ from app.routers import (
     clientes, servicios, ventas, stock, dashboard, costos,
     turnos, auth, contabilidad
 )
+from app.scheduler import crear_scheduler, rotar_pin
 
 # ── Crear tablas ──────────────────────────────────────────────────────────────
 models.Base.metadata.create_all(bind=engine)
@@ -29,6 +30,7 @@ with engine.connect() as _conn:
         ("productos_stock",  "unidad_rendimiento",          "TEXT",     "'aplicaciones'"),
         # Admin
         ("configuracion_negocio", "admin_pin_hash",         "TEXT",     "NULL"),
+        ("configuracion_negocio", "admin_pin_plain",        "TEXT",     "NULL"),
         ("configuracion_negocio", "admin_token",             "TEXT",     "NULL"),
         ("configuracion_negocio", "admin_token_expiry",      "DATETIME", "NULL"),
         # Ficha técnica cliente
@@ -94,6 +96,26 @@ app.add_middleware(
     secret_key=os.environ.get("SESSION_SECRET", "salon-manicura-secret-key-2026"),
     max_age=3600 * 8,   # 8 horas
 )
+
+# ── Scheduler: rotación del PIN ───────────────────────────────────────────────
+_scheduler = crear_scheduler()
+
+@app.on_event("startup")
+async def startup_event():
+    _scheduler.start()
+    # Si no hay PIN generado todavía, generar uno al arrancar
+    from app.database import SessionLocal as _SL
+    _db = _SL()
+    try:
+        _cfg = _db.query(models.ConfiguracionNegocio).filter_by(id=1).first()
+        if _cfg and not _cfg.admin_pin_plain:
+            rotar_pin()
+    finally:
+        _db.close()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    _scheduler.shutdown(wait=False)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -169,10 +191,14 @@ templates.env.filters["ar_fecha"] = ar_fecha
 
 # ── Admin backup download ─────────────────────────────────────────────────────
 from fastapi.responses import FileResponse
+from fastapi import Depends
+from app.routers.auth import get_current_admin_user
 
 @app.get("/admin/backup")
-def descargar_backup():
-    """Descarga directa de la base de datos."""
+def descargar_backup(
+    current_admin: models.User = Depends(get_current_admin_user)
+):
+    """Descarga directa de la base de datos (solo admins autenticados con Google)."""
     if os.path.exists(_DB_PATH):
         nombre = f"salon_backup_{date.today().strftime('%Y%m%d')}.db"
         return FileResponse(_DB_PATH, media_type="application/octet-stream", filename=nombre)

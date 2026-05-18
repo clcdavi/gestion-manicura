@@ -195,6 +195,18 @@ class CostoFijo(Base):
     created_at = Column(DateTime, default=_now)
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    nombre = Column(String(100))
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=_now)
+
+    # Relaciones opcionales si se desea rastrear quién creó qué
+    # ventas = relationship("Venta", back_populates="usuario")
+
 class ConfiguracionNegocio(Base):
     __tablename__ = "configuracion_negocio"
 
@@ -203,6 +215,7 @@ class ConfiguracionNegocio(Base):
     horas_dia = Column(Float, default=7.0)
     pct_ocupacion = Column(Float, default=0.75)
     admin_pin_hash = Column(String(64), nullable=True)
+    admin_pin_plain = Column(String(4), nullable=True) # Guardado para que el admin pueda consultarlo
     admin_token = Column(String(64), nullable=True)
     admin_token_expiry = Column(DateTime, nullable=True)
 

@@ -89,7 +89,7 @@ def verify_admin_token(db: Session, token: str) -> bool:
 def get_punto_equilibrio(db: Session) -> dict:
     servicios = db.query(models.Servicio).filter_by(activo=True).all()
     if not servicios:
-        return {"servicios_minimos": None, "margen_contribucion_promedio": 0, "servicios_por_dia": None}
+        return {"servicios_minimos": 0, "margen_contribucion_promedio": 0, "servicios_por_dia": 0}
 
     total_fijos = sum(
         c.monto for c in db.query(models.CostoFijo).filter_by(activo=True).all()
@@ -103,12 +103,25 @@ def get_punto_equilibrio(db: Session) -> dict:
     costo_var_prom = sum(costos_var) / len(costos_var)
     contribucion = precio_prom - costo_var_prom
 
-    if contribucion <= 0 or total_fijos == 0:
-        return {"servicios_minimos": None, "margen_contribucion_promedio": contribucion, "servicios_por_dia": None}
+    # Sin costos fijos cargados: el punto de equilibrio es 0 (no hay fijos que cubrir)
+    if not total_fijos:
+        return {
+            "servicios_minimos": 0,
+            "margen_contribucion_promedio": round(contribucion),
+            "servicios_por_dia": 0,
+        }
+
+    # Margen de contribución negativo: precio no cubre variables (situación crítica)
+    if contribucion <= 0:
+        return {
+            "servicios_minimos": None,
+            "margen_contribucion_promedio": round(contribucion),
+            "servicios_por_dia": None,
+        }
 
     servicios_minimos = total_fijos / contribucion
     return {
         "servicios_minimos": round(servicios_minimos),
         "margen_contribucion_promedio": round(contribucion),
-        "servicios_por_dia": round(servicios_minimos / dias, 1) if dias > 0 else None,
+        "servicios_por_dia": round(servicios_minimos / dias, 1) if dias > 0 else 0,
     }

@@ -76,13 +76,32 @@
         <span class="nav-icon" style="font-size:.8rem;">💜</span>
         <span class="nav-label" style="font-size:.82rem;">Fidelización</span>
       </a>
+      {% if request.session.get('user_is_admin') %}
+      <div class="nav-separator"></div>
+      <a href="/auth/admin/pin-actual" target="_blank" class="nav-item" style="color:var(--primary)">
+        <span class="nav-icon">🔑</span>
+        <span class="nav-label">Panel Admin</span>
+      </a>
+      {% endif %}
     </nav>
     <div id="adminIndicator" style="display:none;padding:.4rem 1rem .5rem;border-top:1px solid var(--border);font-size:.78rem">
       <span style="color:var(--success,#10B981)">🔓 Admin activo</span>
       <button onclick="adminLogout()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.78rem;padding:0;margin-left:.5rem;text-decoration:underline">Cerrar</button>
     </div>
     <div class="sidebar-footer">
-      <small>v1.0 · Prototipo</small>
+      {% if request.session.get('user_name') %}
+      <div style="font-size:.78rem;color:var(--text-muted);padding:.25rem 0;display:flex;align-items:center;gap:.4rem;">
+        <span>👤</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ request.session.get('user_name') }}">{{ request.session.get('user_name') }}</span>
+        {% if request.session.get('user_is_admin') %}
+        <span style="background:var(--primary);color:#fff;font-size:.65rem;padding:.1rem .35rem;border-radius:999px;font-weight:600;">ADMIN</span>
+        {% endif %}
+      </div>
+      <a href="/auth/logout" style="font-size:.75rem;color:var(--text-muted);text-decoration:none;opacity:.7;" title="Cerrar sesión Google">Cerrar sesión →</a>
+      {% else %}
+      <a href="/auth/login" style="font-size:.78rem;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:.35rem;">🔑 Iniciar sesión</a>
+      {% endif %}
+      <small style="display:block;margin-top:.4rem;opacity:.5;">v2.0</small>
     </div>
   </aside>
 
