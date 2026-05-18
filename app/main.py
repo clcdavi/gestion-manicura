@@ -1,13 +1,14 @@
 import os
 import shutil
 from datetime import date
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy import text
-from app.database import engine
+from sqlalchemy.orm import Session
+from app.database import engine, get_db
 from app import models
 from app.routers import (
     clientes, servicios, ventas, stock, dashboard, costos,
@@ -190,8 +191,6 @@ templates.env.filters["ar_fecha"] = ar_fecha
 
 
 # ── Admin backup download ─────────────────────────────────────────────────────
-from fastapi.responses import FileResponse
-from fastapi import Depends
 from app.routers.auth import get_current_admin_user
 
 @app.get("/admin/backup")
@@ -206,10 +205,6 @@ def descargar_backup(
 
 
 # ── Búsqueda global ───────────────────────────────────────────────────────────
-from fastapi.responses import HTMLResponse
-from app.database import get_db
-from sqlalchemy.orm import Session
-from fastapi import Depends
 
 @app.get("/buscar", response_class=HTMLResponse)
 def buscar_global(request: Request, q: str = "", db: Session = Depends(get_db)):
