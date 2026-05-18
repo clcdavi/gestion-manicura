@@ -49,7 +49,7 @@ with engine.connect() as _conn:
             ))
             _conn.commit()
         except Exception:
-            pass
+            _conn.rollback()
 
 # ── Datos por defecto ─────────────────────────────────────────────────────────
 from app.database import SessionLocal as _Session
